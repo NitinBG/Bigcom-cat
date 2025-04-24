@@ -1,81 +1,20 @@
-import { removeEdgesAndNodes } from '@bigcommerce/catalyst-client';
-import { getTranslations, unstable_setRequestLocale } from 'next-intl/server';
+import { locales } from '~/i18n/routing';
+import { Page as MakeswiftPage } from '~/lib/makeswift';
 
-import { getSessionCustomerId } from '~/auth';
-import { client } from '~/client';
-import { graphql } from '~/client/graphql';
-import { revalidate } from '~/client/revalidate-target';
-import { ProductCardCarousel } from '~/components/product-card-carousel';
-import { ProductCardCarouselFragment } from '~/components/product-card-carousel/fragment';
-import { Slideshow } from '~/components/slideshow';
-import { LocaleType } from '~/i18n/routing';
+interface Params {
+  locale: string;
+}
 
-const HomePageQuery = graphql(
-  `
-    query HomePageQuery {
-      site {
-        newestProducts(first: 12) {
-          edges {
-            node {
-              ...ProductCardCarouselFragment
-            }
-          }
-        }
-        featuredProducts(first: 12) {
-          edges {
-            node {
-              ...ProductCardCarouselFragment
-            }
-          }
-        }
-      }
-    }
-  `,
-  [ProductCardCarouselFragment],
-);
+export function generateStaticParams(): Params[] {
+  return locales.map((locale) => ({ locale }));
+}
 
 interface Props {
-  params: {
-    locale: LocaleType;
-  };
+  params: Promise<Params>;
 }
 
-export default async function Home({ params: { locale } }: Props) {
-  unstable_setRequestLocale(locale);
+export default async function Home({ params }: Props) {
+  const { locale } = await params;
 
-  const t = await getTranslations('Home');
-
-  const customerId = await getSessionCustomerId();
-
-  const { data } = await client.fetch({
-    document: HomePageQuery,
-    customerId,
-    fetchOptions: customerId ? { cache: 'no-store' } : { next: { revalidate } },
-  });
-
-  const featuredProducts = removeEdgesAndNodes(data.site.featuredProducts);
-  const newestProducts = removeEdgesAndNodes(data.site.newestProducts);
-
-  return (
-    <>
-      <Slideshow />
-
-      <div className="my-10">
-        <ProductCardCarousel
-          products={featuredProducts}
-          showCart={false}
-          showCompare={false}
-          title={t('Carousel.featuredProducts')}
-        />
-        <ProductCardCarousel
-          products={newestProducts}
-          showCart={false}
-          showCompare={false}
-          title={t('Carousel.newestProducts')}
-        />
-      </div>
-    </>
-  );
+  return <MakeswiftPage locale={locale} path="/" />;
 }
-
-export const runtime = 'edge';

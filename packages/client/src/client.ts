@@ -1,4 +1,5 @@
-import { BigCommerceAPIError } from './error';
+import { BigCommerceAPIError } from './api-error';
+import { BigCommerceGQLError } from './gql-error';
 import { DocumentDecoration } from './types';
 import { getOperationInfo } from './utils/getOperationName';
 import { normalizeQuery } from './utils/normalizeQuery';
@@ -12,18 +13,30 @@ export const adminApiHostname: string =
 
 interface Config<FetcherRequestInit extends RequestInit = RequestInit> {
   storeHash: string;
-  customerImpersonationToken: string;
+  storefrontToken: string;
   xAuthToken: string;
   channelId?: string;
   platform?: string;
   backendUserAgentExtensions?: string;
   logger?: boolean;
   getChannelId?: (defaultChannelId: string) => Promise<string> | string;
-  beforeRequest?: (fetchOptions?: FetcherRequestInit) => Partial<FetcherRequestInit> | undefined;
+  beforeRequest?: (
+    fetchOptions?: FetcherRequestInit,
+  ) => Promise<Partial<FetcherRequestInit> | undefined> | Partial<FetcherRequestInit> | undefined;
+}
+
+interface BigCommerceResponseError {
+  message: string;
+  locations: Array<{
+    line: number;
+    column: number;
+  }>;
+  path: string[];
 }
 
 interface BigCommerceResponse<T> {
   data: T;
+  errors?: BigCommerceResponseError[];
 }
 
 class Client<FetcherRequestInit extends RequestInit = RequestInit> {
@@ -32,7 +45,8 @@ class Client<FetcherRequestInit extends RequestInit = RequestInit> {
   private getChannelId: (defaultChannelId: string) => Promise<string> | string;
   private beforeRequest?: (
     fetchOptions?: FetcherRequestInit,
-  ) => Partial<FetcherRequestInit> | undefined;
+  ) => Promise<Partial<FetcherRequestInit> | undefined> | Partial<FetcherRequestInit> | undefined;
+
   private trustedProxySecret = process.env.BIGCOMMERCE_TRUSTED_PROXY_SECRET;
 
   constructor(private config: Config<FetcherRequestInit>) {
@@ -52,7 +66,7 @@ class Client<FetcherRequestInit extends RequestInit = RequestInit> {
   async fetch<TResult, TVariables extends Record<string, unknown>>(config: {
     document: DocumentDecoration<TResult, TVariables>;
     variables: TVariables;
-    customerId?: string;
+    customerAccessToken?: string;
     fetchOptions?: FetcherRequestInit;
     channelId?: string;
   }): Promise<BigCommerceResponse<TResult>>;
@@ -61,7 +75,7 @@ class Client<FetcherRequestInit extends RequestInit = RequestInit> {
   async fetch<TResult>(config: {
     document: DocumentDecoration<TResult, Record<string, never>>;
     variables?: undefined;
-    customerId?: string;
+    customerAccessToken?: string;
     fetchOptions?: FetcherRequestInit;
     channelId?: string;
   }): Promise<BigCommerceResponse<TResult>>;
@@ -69,13 +83,13 @@ class Client<FetcherRequestInit extends RequestInit = RequestInit> {
   async fetch<TResult, TVariables>({
     document,
     variables,
-    customerId,
+    customerAccessToken,
     fetchOptions = {} as FetcherRequestInit,
     channelId,
   }: {
     document: DocumentDecoration<TResult, TVariables>;
     variables?: TVariables;
-    customerId?: string;
+    customerAccessToken?: string;
     fetchOptions?: FetcherRequestInit;
     channelId?: string;
   }): Promise<BigCommerceResponse<TResult>> {
@@ -85,15 +99,15 @@ class Client<FetcherRequestInit extends RequestInit = RequestInit> {
 
     const graphqlUrl = await this.getGraphQLEndpoint(channelId);
     const { headers: additionalFetchHeaders = {}, ...additionalFetchOptions } =
-      this.beforeRequest?.(fetchOptions) ?? {};
+      (await this.beforeRequest?.(fetchOptions)) ?? {};
 
     const response = await fetch(graphqlUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.config.customerImpersonationToken}`,
+        Authorization: `Bearer ${this.config.storefrontToken}`,
         'User-Agent': this.backendUserAgent,
-        ...(customerId && { 'X-Bc-Customer-Id': customerId }),
+        ...(customerAccessToken && { 'X-Bc-Customer-Access-Token': customerAccessToken }),
         ...(this.trustedProxySecret && { 'X-BC-Trusted-Proxy-Secret': this.trustedProxySecret }),
         ...additionalFetchHeaders,
         ...headers,
@@ -112,7 +126,15 @@ class Client<FetcherRequestInit extends RequestInit = RequestInit> {
 
     log(response);
 
-    return response.json() as Promise<BigCommerceResponse<TResult>>;
+    const result = (await response.json()) as BigCommerceResponse<TResult>;
+
+    const { errors, ...data } = result;
+
+    if (errors) {
+      throw BigCommerceGQLError.createFromResult(errors);
+    }
+
+    return data;
   }
 
   async fetchShippingZones() {

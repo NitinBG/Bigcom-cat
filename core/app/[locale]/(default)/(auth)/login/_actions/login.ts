@@ -1,33 +1,53 @@
 'use server';
 
-import { isRedirectError } from 'next/dist/client/components/redirect';
+import { BigCommerceGQLError } from '@bigcommerce/catalyst-client';
+import { SubmissionResult } from '@conform-to/react';
+import { parseWithZod } from '@conform-to/zod';
+import { getLocale, getTranslations } from 'next-intl/server';
 
-import { Credentials, signIn } from '~/auth';
+import { schema } from '@/vibes/soul/sections/sign-in-section/schema';
+import { signIn } from '~/auth';
 import { redirect } from '~/i18n/routing';
 
-export const login = async (_previousState: unknown, formData: FormData) => {
+export const login = async (_lastResult: SubmissionResult | null, formData: FormData) => {
+  const locale = await getLocale();
+  const t = await getTranslations('Login');
+
+  const submission = parseWithZod(formData, { schema });
+
+  if (submission.status !== 'success') {
+    return submission.reply({ formErrors: [t('Form.error')] });
+  }
+
   try {
-    const credentials = Credentials.parse({
-      email: formData.get('email'),
-      password: formData.get('password'),
-    });
+    await signIn(
+      {
+        type: 'password',
+        email: submission.value.email,
+        password: submission.value.password,
+      },
+      {
+        // We want to use next/navigation for the redirect as it
+        // follows basePath and trailing slash configurations.
+        redirect: false,
+      },
+    );
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
 
-    await signIn('credentials', {
-      ...credentials,
-      // We want to use next/navigation for the redirect as it
-      // follows basePath and trailing slash configurations.
-      redirect: false,
-    });
-
-    redirect('/account');
-  } catch (error: unknown) {
-    // We need to throw this error to trigger the redirect as Next.js uses error boundaries to redirect.
-    if (isRedirectError(error)) {
-      throw error;
+    if (error instanceof BigCommerceGQLError) {
+      return submission.reply({
+        formErrors: error.errors.map(({ message }) => message),
+      });
     }
 
-    return {
-      status: 'error',
-    };
+    if (error instanceof Error) {
+      return submission.reply({ formErrors: [error.message] });
+    }
+
+    return submission.reply({ formErrors: [t('Form.error')] });
   }
+
+  return redirect({ href: '/account/orders', locale });
 };

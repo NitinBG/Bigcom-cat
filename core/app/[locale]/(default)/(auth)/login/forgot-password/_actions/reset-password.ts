@@ -1,14 +1,13 @@
 'use server';
 
+import { BigCommerceGQLError } from '@bigcommerce/catalyst-client';
+import { SubmissionResult } from '@conform-to/react';
+import { parseWithZod } from '@conform-to/zod';
 import { getTranslations } from 'next-intl/server';
-import { z } from 'zod';
 
+import { schema } from '@/vibes/soul/sections/forgot-password-section/schema';
 import { client } from '~/client';
 import { graphql } from '~/client/graphql';
-
-const ResetPasswordSchema = z.object({
-  email: z.string().email(),
-});
 
 const ResetPasswordMutation = graphql(`
   mutation ResetPassword($input: RequestResetPasswordInput!, $reCaptcha: ReCaptchaV2Input) {
@@ -26,32 +25,29 @@ const ResetPasswordMutation = graphql(`
   }
 `);
 
-interface SubmitResetPasswordForm {
-  formData: FormData;
-  path: string;
-  reCaptchaToken: string;
-}
-
-export const resetPassword = async ({
-  formData,
-  path,
-  reCaptchaToken,
-}: SubmitResetPasswordForm) => {
+export const resetPassword = async (
+  _lastResult: { lastResult: SubmissionResult | null; successMessage?: string },
+  formData: FormData,
+  // TODO: add recaptcha token
+  // reCaptchaToken,
+): Promise<{ lastResult: SubmissionResult | null; successMessage?: string }> => {
   const t = await getTranslations('Login.ForgotPassword');
 
-  try {
-    const parsedData = ResetPasswordSchema.parse({
-      email: formData.get('email'),
-    });
+  const submission = parseWithZod(formData, { schema });
 
+  if (submission.status !== 'success') {
+    return { lastResult: submission.reply({ formErrors: [t('Errors.error')] }) };
+  }
+
+  try {
     const response = await client.fetch({
       document: ResetPasswordMutation,
       variables: {
         input: {
-          email: parsedData.email,
-          path,
+          email: submission.value.email,
+          path: '/change-password',
         },
-        ...(reCaptchaToken && { reCaptchaV2: { token: reCaptchaToken } }),
+        // ...(reCaptchaToken && { reCaptchaV2: { token: reCaptchaToken } }),
       },
       fetchOptions: {
         cache: 'no-store',
@@ -61,18 +57,31 @@ export const resetPassword = async ({
     const result = response.data.customer.requestResetPassword;
 
     if (result.errors.length === 0) {
-      return { status: 'success', data: parsedData };
+      return {
+        lastResult: submission.reply(),
+        successMessage: t('Form.confirmResetPassword', { email: submission.value.email }),
+      };
     }
 
     return {
-      status: 'error',
-      error: result.errors.map((error) => error.message).join('\n'),
+      lastResult: submission.reply({ formErrors: result.errors.map((error) => error.message) }),
     };
-  } catch (error: unknown) {
-    if (error instanceof Error || error instanceof z.ZodError) {
-      return { status: 'error', error: error.message };
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error(error);
+
+    if (error instanceof BigCommerceGQLError) {
+      return {
+        lastResult: submission.reply({
+          formErrors: error.errors.map(({ message }) => message),
+        }),
+      };
     }
 
-    return { status: 'error', error: t('Errors.error') };
+    if (error instanceof Error) {
+      return { lastResult: submission.reply({ formErrors: [error.message] }) };
+    }
+
+    return { lastResult: submission.reply({ formErrors: [t('Errors.error')] }) };
   }
 };
