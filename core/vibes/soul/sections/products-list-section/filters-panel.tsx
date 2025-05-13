@@ -178,16 +178,18 @@ export function FiltersPanelInner({
         type="multiple"
         value={accordionItems.filter((item) => item.expanded).map((item) => item.value)}
       >
-        {accordionItems.map((accordionItem) => {
+       {accordionItems.map((accordionItem) => {
           const { key, value, filter } = accordionItem;
-          if (filter?.label === 'test') {
+          if (filter?.label === process?.env?.NEXT_PUBLIC_CUSTOME_FIELD_ATTRIBUTE) {
             return (
               <Accordion
                 key={key}
                 title={`${filter.label}${'paramName' in filter ? getParamCountLabel(optimisticParams, filter.paramName) : ''}`}
                 value={value}
               >
-                <RangeSlider filter={filter} getRangeFromSlider={getRangeFromSlider} />
+                {'paramName' in filter ? (
+                  <RangeSlider filter={filter} getRangeFromSlider={getRangeFromSlider} value={optimisticParams[filter.paramName] ?? []} />
+                ) : null}
               </Accordion>
             );
           }

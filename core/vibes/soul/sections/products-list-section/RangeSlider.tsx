@@ -18,11 +18,12 @@ interface RangeSliderProps {
   getRangeFromSlider: (selected: string[], filter: any) => void;
 }
 
-export default function RangeSlider({ filter, getRangeFromSlider }: RangeSliderProps) {
+export default function RangeSlider({ filter, getRangeFromSlider, value }: RangeSliderProps) {
   const numericOptions = useMemo(() => filter.options.map(opt => Number(opt.value)), [filter.options]);
-  const minValue = Math.min(0, ...numericOptions);
+  const minValue = Math.min(0, ...value) || Math.min(0, ...numericOptions);
   const maxValue = Math.max(...numericOptions);
-  const [range, setRange] = useState({ start: minValue, end: minValue });
+  const maxParam = Math.max(0, ...value) || Math.max(...numericOptions);
+  const [range, setRange] = useState({ start: minValue, end: maxParam ||  maxValue});
 
   const selectedOptions =() => {
     const { start, end } = range;
@@ -103,7 +104,26 @@ export default function RangeSlider({ filter, getRangeFromSlider }: RangeSliderP
         />
       </div>
 
-      {/* Range Display */}
+      {/* Tick Marks & Labels */}
+      {/* <div className="relative w-full mt-2 h-10">
+        {filter.options.map((opt, index) => {
+          const percent = (index / (filter.options.length - 1)) * 100;
+          return (
+            <div
+              key={opt.value}
+              className="absolute flex flex-col items-center"
+              style={{ left: `${percent}%`, transform: 'translateX(-50%)' }}
+            >
+              <div className="w-px h-3 bg-[hsl(var(--contrast-400))] mb-1"></div>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {opt.label}
+              </span>
+            </div>
+          );
+        })}
+      </div> */}
+
+      {/* Selected Range Values */}
       <div className="flex justify-between mt-6 px-2">
         <div className="flex flex-col items-center">
           <span className="text-xs font-medium text-muted-foreground">From</span>
@@ -115,7 +135,7 @@ export default function RangeSlider({ filter, getRangeFromSlider }: RangeSliderP
         </div>
       </div>
 
-      {/* Debug (optional) */}
+      {/* Debug */}
       <div className="mt-4 text-sm text-muted-foreground">
         <p>Selected: {selectedOptions()?.join(', ')}</p>
       </div>
