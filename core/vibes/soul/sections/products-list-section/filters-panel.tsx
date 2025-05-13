@@ -19,6 +19,7 @@ import { Rating } from '@/vibes/soul/primitives/rating';
 import { Link } from '~/components/link';
 
 import { getFilterParsers } from './filter-parsers';
+import RangeSlider from './RangeSlider';
 
 export interface LinkGroupFilter {
   type: 'link-group';
@@ -131,6 +132,21 @@ export function FiltersPanelInner({
 
   const linkGroupFilters = filters.filter((filter) => filter.type === 'link-group');
 
+  const getRangeFromSlider = (selectedOptions: any[], filter: any): void => {
+    const isSelectedEmpty = selectedOptions.length === 0;
+    const nextParams = {
+      ...optimisticParams,
+      [startCursorParamName]: null,
+      [endCursorParamName]: null,
+      [filter.paramName]: isSelectedEmpty ? null : selectedOptions,
+    };
+
+    startTransition(() => {
+      setOptimisticParams(nextParams);
+      setParams(nextParams);
+    });
+  };
+
   return (
     <div className={clsx('space-y-5', className)} data-pending={isPending ? true : null}>
       {linkGroupFilters.map((linkGroup, index) => (
@@ -162,9 +178,21 @@ export function FiltersPanelInner({
         type="multiple"
         value={accordionItems.filter((item) => item.expanded).map((item) => item.value)}
       >
-        {accordionItems.map((accordionItem) => {
+       {accordionItems.map((accordionItem) => {
           const { key, value, filter } = accordionItem;
-
+          if (filter?.label === process?.env?.NEXT_PUBLIC_CUSTOME_FIELD_ATTRIBUTE) {
+            return (
+              <Accordion
+                key={key}
+                title={`${filter.label}${'paramName' in filter ? getParamCountLabel(optimisticParams, filter.paramName) : ''}`}
+                value={value}
+              >
+                {'paramName' in filter ? (
+                  <RangeSlider filter={filter} getRangeFromSlider={getRangeFromSlider} value={optimisticParams[filter.paramName] ?? []} />
+                ) : null}
+              </Accordion>
+            );
+          }
           switch (filter.type) {
             case 'toggle-group':
               return (
