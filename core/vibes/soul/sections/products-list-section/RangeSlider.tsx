@@ -29,6 +29,7 @@ export default function RangeSlider({ filter, getRangeFromSlider, value }: Range
     const { start, end } = range;
     const lower = Math.min(start, end);
     const upper = Math.max(start, end);
+
     return filter.options
       .filter(opt => {
         const numValue = Number(opt.value);
@@ -37,7 +38,9 @@ export default function RangeSlider({ filter, getRangeFromSlider, value }: Range
       .map(opt => opt.value);
   }
 
-
+  useEffect(() => {
+    getRangeFromSlider(selectedOptions(), filter);
+  }, [range, filter]);
 
   const getPercent = (value: number) =>
     ((value - minValue) / (maxValue - minValue)) * 100;
@@ -49,10 +52,6 @@ export default function RangeSlider({ filter, getRangeFromSlider, value }: Range
       const newEnd = key === 'end' ? Math.max(value, prev.start) : prev.end;
       return { start: newStart, end: newEnd };
     });
-    setTimeout(() => {
-      const arr = selectedOptions();
-      getRangeFromSlider(arr, filter);
-    })
   };
 
   const sliderThumbClasses = `
