@@ -3,15 +3,17 @@
   "description": "BigCommerce Catalyst is a Next.js starter kit for building headless BigCommerce storefronts.",
   "version": "0.24.1",
   "private": true,
-    "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "node server.js",
-    "lint": "next lint"
-  },,
+    "dev": "npm run generate && next dev",
+    "generate": "dotenv -e .env.local -- node ./scripts/generate.cjs",
+    "build": "npm run generate && next build",
+    "build:analyze": "ANALYZE=true npm run build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
-    "@bigcommerce/catalyst-client": "0.24.1",
+    "@bigcommerce/catalyst-client": "workspace:^",
     "@conform-to/react": "^1.2.2",
     "@conform-to/zod": "^1.2.2",
     "@icons-pack/react-simple-icons": "^10.2.0",
@@ -75,7 +77,7 @@
   },
   "devDependencies": {
     "@0no-co/graphqlsp": "^1.12.16",
-    "@bigcommerce/eslint-config-catalyst": "0.24.1",
+    "@bigcommerce/eslint-config-catalyst": "workspace:^",
     "@faker-js/faker": "^9.3.0",
     "@gql.tada/cli-utils": "^1.6.3",
     "@next/bundle-analyzer": "15.1.0",
