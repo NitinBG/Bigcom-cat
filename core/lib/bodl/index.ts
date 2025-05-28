@@ -9,7 +9,7 @@ const bodl = new Bodl({
   },
 });
 
-if (typeof window !== 'undefined') {
+if (bodl) {
   bodl.initialize();
 }
 
