@@ -22,7 +22,7 @@ const currencySwitchSchema = z.object({
 
 // Note: this results in a new cart being created in the new currency, so the cart ID will change
 const UpdateCartCurrencyMutation = graphql(`
-  mutation UpdateCartCurrency($input: UpdateCartCurrencyInput!) {
+  mutation UpdateCartCurrencyMutation($input: UpdateCartCurrencyInput!) {
     cart {
       updateCartCurrency(input: $input) {
         cart {
@@ -49,7 +49,7 @@ export const updateCartCurrency = async (cartId: string, currencyCode: CurrencyC
 };
 
 export const switchCurrency = async (_prevState: SubmissionResult | null, payload: FormData) => {
-  const t = await getTranslations('Components.Header.Currency');
+  const t = await getTranslations('Components.Header.SwitchCurrency');
 
   const submission = parseWithZod(payload, { schema: currencySwitchSchema });
 

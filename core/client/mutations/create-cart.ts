@@ -1,4 +1,5 @@
 import { getSessionCustomerAccessToken } from '~/auth';
+import { getPreferredCurrencyCode } from '~/lib/currency';
 
 import { client } from '..';
 import { graphql, VariablesOf } from '../graphql';
@@ -16,17 +17,18 @@ const CreateCartMutation = graphql(`
 `);
 
 type Variables = VariablesOf<typeof CreateCartMutation>;
-type CreateCartInput = Variables['createCartInput'];
-type LineItems = CreateCartInput['lineItems'];
+export type CreateCartInput = Variables['createCartInput'];
 
-export const createCart = async (cartItems: LineItems) => {
+export const createCart = async (data: CreateCartInput) => {
   const customerAccessToken = await getSessionCustomerAccessToken();
+  const currencyCode = await getPreferredCurrencyCode();
 
   return await client.fetch({
     document: CreateCartMutation,
     variables: {
       createCartInput: {
-        lineItems: cartItems,
+        ...data,
+        currencyCode,
       },
     },
     customerAccessToken,

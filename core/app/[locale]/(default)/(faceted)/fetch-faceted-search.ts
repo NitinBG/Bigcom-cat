@@ -2,13 +2,11 @@ import { removeEdgesAndNodes } from '@bigcommerce/catalyst-client';
 import { cache } from 'react';
 import { z } from 'zod';
 
-import { getSessionCustomerAccessToken } from '~/auth';
 import { client } from '~/client';
 import { PaginationFragment } from '~/client/fragments/pagination';
 import { graphql, VariablesOf } from '~/client/graphql';
-import { revalidate } from '~/client/revalidate-target';
+import { CurrencyCode } from '~/components/header/fragment';
 import { ProductCardFragment } from '~/components/product-card/fragment';
-import { getPreferredCurrencyCode } from '~/lib/currency';
 
 const GetProductSearchResultsQuery = graphql(
   `
@@ -149,6 +147,13 @@ const GetProductSearchResultsQuery = graphql(
             }
           }
         }
+        settings {
+          storefront {
+            catalog {
+              productComparisonsEnabled
+            }
+          }
+        }
       }
     }
   `,
@@ -168,9 +173,11 @@ interface ProductSearch {
 }
 
 const getProductSearchResults = cache(
-  async ({ limit = 9, after, before, sort, filters }: ProductSearch) => {
-    const customerAccessToken = await getSessionCustomerAccessToken();
-    const currencyCode = await getPreferredCurrencyCode();
+  async (
+    { limit = 9, after, before, sort, filters }: ProductSearch,
+    currencyCode?: CurrencyCode,
+    customerAccessToken?: string,
+  ) => {
     const filterArgs = { filters, sort };
     const paginationArgs = before ? { last: limit, before } : { first: limit, after };
 
@@ -187,7 +194,6 @@ const getProductSearchResults = cache(
 
     const items = removeEdgesAndNodes(searchResults.products).map((product) => ({
       ...product,
-      fetchOptions: { next: { revalidate } },
     }));
 
     return {
@@ -393,15 +399,23 @@ export const PublicToPrivateParams = PublicSearchParamsSchema.catchall(SearchPar
 
 export const fetchFacetedSearch = cache(
   // We need to make sure the reference passed into this function is the same if we want it to be memoized.
-  async (params: z.input<typeof PublicSearchParamsSchema>) => {
+  async (
+    params: z.input<typeof PublicSearchParamsSchema>,
+    currencyCode?: CurrencyCode,
+    customerAccessToken?: string,
+  ) => {
     const { after, before, limit = 9, sort, filters } = PublicToPrivateParams.parse(params);
 
-    return getProductSearchResults({
-      after,
-      before,
-      limit,
-      sort,
-      filters,
-    });
+    return getProductSearchResults(
+      {
+        after,
+        before,
+        limit,
+        sort,
+        filters,
+      },
+      currencyCode,
+      customerAccessToken,
+    );
   },
 );
