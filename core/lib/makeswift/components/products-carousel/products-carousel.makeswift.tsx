@@ -3,26 +3,23 @@
 import {
   Checkbox,
   Combobox,
+  Group,
   List,
   Number,
   Select,
-  Shape,
   Style,
   TextInput,
 } from '@makeswift/runtime/controls';
 import { ComponentPropsWithoutRef } from 'react';
 
-import {
-  ProductsCarousel,
-  ProductsCarouselSkeleton,
-} from '@/vibes/soul/primitives/products-carousel';
+import { ProductCarousel, ProductsCarouselSkeleton } from '@/vibes/soul/sections/product-carousel';
 import { runtime } from '~/lib/makeswift/runtime';
 
 import { searchProducts } from '../../utils/search-products';
 import { useProducts } from '../../utils/use-products';
 
 type MSProductsCarouselProps = Omit<
-  ComponentPropsWithoutRef<typeof ProductsCarousel>,
+  ComponentPropsWithoutRef<typeof ProductCarousel>,
   'products'
 > & {
   className: string;
@@ -58,7 +55,7 @@ runtime.registerComponent(
     }
 
     return (
-      <ProductsCarousel
+      <ProductCarousel
         {...props}
         className={className}
         hideOverflow={hideOverflow}
@@ -85,8 +82,9 @@ runtime.registerComponent(
       limit: Number({ label: 'Max collection items', defaultValue: 12 }),
       additionalProducts: List({
         label: 'Additional products',
-        type: Shape({
-          type: {
+        type: Group({
+          label: 'Product',
+          props: {
             title: TextInput({ label: 'Title', defaultValue: 'Product title' }),
             entityId: Combobox({
               label: 'Product',

@@ -1,37 +1,18 @@
-import { NextRequest } from 'next/server';
-import { parse as parseSetCookie } from 'set-cookie-parser';
+import { unstable_isDraftModeRequest } from '@makeswift/runtime/next/middleware';
 
 import { MiddlewareFactory } from './compose-middlewares';
 
 export const withMakeswift: MiddlewareFactory = (middleware) => {
   return async (request, event) => {
-    const apiKey = request.nextUrl.searchParams.get('x-makeswift-draft-mode');
+    const isDraftRequest = unstable_isDraftModeRequest(request);
 
-    if (apiKey === process.env.MAKESWIFT_SITE_API_KEY) {
-      const response = await fetch(new URL('/api/makeswift/draft-mode', request.nextUrl.origin), {
-        headers: {
-          'x-makeswift-api-key': apiKey,
-        },
-      });
+    if (isDraftRequest) {
+      // Makeswift Builder's locale switcher expects the host to derive locale strictly from
+      // the URL. Disable cookie- and language-based locale detection when in draft mode to
+      // meet this expectation.
+      request.headers.set('x-bc-disable-locale-detection', 'true');
 
-      const cookies = parseSetCookie(response.headers.get('set-cookie') || '');
-      const prerenderBypassValue = cookies.find((c) => c.name === '__prerender_bypass')?.value;
-
-      if (!prerenderBypassValue) {
-        return middleware(request, event);
-      }
-
-      // https://github.com/vercel/next.js/issues/52967#issuecomment-1644675602
-      // if we don't pass request twice, headers are stripped
-      const proxiedRequest = new NextRequest(request, request);
-
-      proxiedRequest.cookies.set('__prerender_bypass', prerenderBypassValue);
-      proxiedRequest.cookies.set(
-        'x-makeswift-draft-data',
-        JSON.stringify({ makeswift: true, siteVersion: 'Working' }),
-      );
-
-      return middleware(proxiedRequest, event);
+      return await middleware(request, event);
     }
 
     return middleware(request, event);
