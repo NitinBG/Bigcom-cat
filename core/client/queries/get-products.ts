@@ -6,11 +6,10 @@ import { client } from '~/client';
 import { graphql, ResultOf } from '~/client/graphql';
 import { revalidate } from '~/client/revalidate-target';
 import { ProductCardFragment } from '~/components/product-card/fragment';
-import { getPreferredCurrencyCode } from '~/lib/currency';
 
 const GetBestSellingProductsQuery = graphql(
   `
-    query getBestSellingProducts($currencyCode: currencyCode) {
+    query getBestSellingProducts {
       site {
         bestSellingProducts {
           edges {
@@ -35,7 +34,7 @@ const GetBestSellingProductsQuery = graphql(
 
 const GetFeaturedProductsQuery = graphql(
   `
-    query getFeaturedProducts($currencyCode: currencyCode) {
+    query getFeaturedProducts {
       site {
         featuredProducts {
           edges {
@@ -60,7 +59,7 @@ const GetFeaturedProductsQuery = graphql(
 
 const GetNewestProductsQuery = graphql(
   `
-    query getNewestProducts($currencyCode: currencyCode) {
+    query getNewestProducts {
       site {
         newestProducts {
           edges {
@@ -85,7 +84,7 @@ const GetNewestProductsQuery = graphql(
 
 const GetProductsByIds = graphql(
   `
-    query GetProductsByIds($entityIds: [Int!], $currencyCode: currencyCode) {
+    query GetProductsByIds($entityIds: [Int!]) {
       site {
         products(entityIds: $entityIds) {
           edges {
@@ -116,13 +115,11 @@ export type GetProductsResponse = Array<
 
 const getBestSellingProducts = cache(async () => {
   const customerAccessToken = await getSessionCustomerAccessToken();
-  const currencyCode = await getPreferredCurrencyCode();
 
   try {
     const response = await client.fetch({
       document: GetBestSellingProductsQuery,
       customerAccessToken,
-      variables: { currencyCode },
       fetchOptions: customerAccessToken ? { cache: 'no-store' } : { next: { revalidate } },
     });
 
@@ -143,13 +140,11 @@ const getBestSellingProducts = cache(async () => {
 
 const getFeaturedProducts = cache(async () => {
   const customerAccessToken = await getSessionCustomerAccessToken();
-  const currencyCode = await getPreferredCurrencyCode();
 
   try {
     const response = await client.fetch({
       document: GetFeaturedProductsQuery,
       customerAccessToken,
-      variables: { currencyCode },
       fetchOptions: customerAccessToken ? { cache: 'no-store' } : { next: { revalidate } },
     });
 
@@ -170,13 +165,11 @@ const getFeaturedProducts = cache(async () => {
 
 const getNewestProducts = cache(async () => {
   const customerAccessToken = await getSessionCustomerAccessToken();
-  const currencyCode = await getPreferredCurrencyCode();
 
   try {
     const response = await client.fetch({
       document: GetNewestProductsQuery,
       customerAccessToken,
-      variables: { currencyCode },
       fetchOptions: customerAccessToken ? { cache: 'no-store' } : { next: { revalidate } },
     });
 
@@ -197,12 +190,11 @@ const getNewestProducts = cache(async () => {
 
 const getProductsByIds = cache(async (entityIds: number[]) => {
   const customerAccessToken = await getSessionCustomerAccessToken();
-  const currencyCode = await getPreferredCurrencyCode();
 
   try {
     const response = await client.fetch({
       document: GetProductsByIds,
-      variables: { entityIds, currencyCode },
+      variables: { entityIds },
       customerAccessToken,
       fetchOptions: customerAccessToken ? { cache: 'no-store' } : { next: { revalidate } },
     });

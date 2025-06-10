@@ -8,22 +8,13 @@ import { client } from './client';
 import { graphql } from './client/graphql';
 import { cspHeader } from './lib/content-security-policy';
 
-const withMakeswift = createWithMakeswift();
-const withNextIntl = createNextIntlPlugin({
-  experimental: {
-    createMessagesDeclaration: './messages/en.json',
-  },
-});
+const withMakeswift = createWithMakeswift({ previewMode: false });
+const withNextIntl = createNextIntlPlugin();
 
-const SettingsQuery = graphql(`
-  query SettingsQuery {
+const LocaleQuery = graphql(`
+  query LocaleQuery {
     site {
       settings {
-        url {
-          vanityUrl
-          cdnUrl
-          checkoutUrl
-        }
         locales {
           code
           isDefault
@@ -33,21 +24,7 @@ const SettingsQuery = graphql(`
   }
 `);
 
-async function writeSettingsToBuildConfig() {
-  const { data } = await client.fetch({ document: SettingsQuery });
-
-  return await writeBuildConfig({
-    locales: data.site.settings?.locales,
-    urls: {
-      ...data.site.settings?.url,
-      cdnUrl: process.env.NEXT_PUBLIC_BIGCOMMERCE_CDN_HOSTNAME ?? data.site.settings?.url.cdnUrl,
-    },
-  });
-}
-
 export default async (): Promise<NextConfig> => {
-  const settings = await writeSettingsToBuildConfig();
-
   let nextConfig: NextConfig = {
     reactStrictMode: true,
     experimental: {
@@ -59,20 +36,7 @@ export default async (): Promise<NextConfig> => {
     },
     eslint: {
       ignoreDuringBuilds: !!process.env.CI,
-      dirs: [
-        'app',
-        'auth',
-        'build-config',
-        'client',
-        'components',
-        'data-transformers',
-        'i18n',
-        'lib',
-        'middlewares',
-        'scripts',
-        'tests',
-        'vibes',
-      ],
+      dirs: ['app', 'client', 'components', 'lib', 'middlewares'],
     },
     // default URL generation in BigCommerce uses trailing slash
     trailingSlash: process.env.TRAILING_SLASH !== 'false',
@@ -88,7 +52,7 @@ export default async (): Promise<NextConfig> => {
             },
             {
               key: 'Link',
-              value: `<https://${settings.urls.cdnUrl}>; rel=preconnect`,
+              value: `<https://${process.env.BIGCOMMERCE_CDN_HOSTNAME ?? 'cdn11.bigcommerce.com'}>; rel=preconnect`,
             },
           ],
         },
@@ -108,5 +72,13 @@ export default async (): Promise<NextConfig> => {
     nextConfig = withBundleAnalyzer(nextConfig);
   }
 
+  await writeLocaleToBuildConfig();
+
   return nextConfig;
 };
+
+async function writeLocaleToBuildConfig() {
+  const { data } = await client.fetch({ document: LocaleQuery });
+
+  await writeBuildConfig({ locales: data.site.settings?.locales });
+}

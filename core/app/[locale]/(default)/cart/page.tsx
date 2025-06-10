@@ -1,80 +1,51 @@
 import { Metadata } from 'next';
-import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server';
+import { getFormatter, getTranslations } from 'next-intl/server';
 
-import { Streamable } from '@/vibes/soul/lib/streamable';
 import { Cart as CartComponent, CartEmptyState } from '@/vibes/soul/sections/cart';
-import { CartAnalyticsProvider } from '~/app/[locale]/(default)/cart/_components/cart-analytics-provider';
 import { getCartId } from '~/lib/cart';
-import { Slot } from '~/lib/makeswift/slot';
-import { exists } from '~/lib/utils';
 
 import { redirectToCheckout } from './_actions/redirect-to-checkout';
-import { updateCouponCode } from './_actions/update-coupon-code';
 import { updateLineItem } from './_actions/update-line-item';
-import { updateShippingInfo } from './_actions/update-shipping-info';
 import { CartViewed } from './_components/cart-viewed';
-import { getCart, getShippingCountries } from './page-data';
+import { getCart } from './page-data';
 
-interface Props {
-  params: Promise<{ locale: string }>;
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: 'Cart' });
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Cart');
 
   return {
     title: t('title'),
   };
 }
 
-const getAnalyticsData = async (cartId: string) => {
-  const data = await getCart({ cartId });
-  const cart = data.site.cart;
-
-  if (!cart) return [];
-
-  const lineItems = [...cart.lineItems.physicalItems, ...cart.lineItems.digitalItems];
-
-  return lineItems.map((item) => ({
-    entityId: item.entityId,
-    id: item.productEntityId,
-    name: item.name,
-    brand: item.brand ?? '',
-    sku: item.sku ?? '',
-    price: item.listPrice.value,
-    quantity: item.quantity,
-    currency: item.listPrice.currencyCode,
-  }));
-};
-
-export default async function Cart({ params }: Props) {
-  const { locale } = await params;
-  setRequestLocale(locale);
-
+export default async function Cart() {
   const t = await getTranslations('Cart');
   const format = await getFormatter();
   const cartId = await getCartId();
 
-  const emptyState = (
-    <>
-      <Slot label="Cart top content" snapshotId="cart-top-content" />
+  if (!cartId) {
+    return (
       <CartEmptyState
         cta={{ label: t('Empty.cta'), href: '/shop-all' }}
         subtitle={t('Empty.subtitle')}
         title={t('Empty.title')}
       />
-      <Slot label="Cart bottom content" snapshotId="cart-bottom-content" />
-    </>
-  );
+    );
+  }
 
-  if (!cartId) return emptyState;
+  const data = await getCart(cartId);
 
-  const data = await getCart({ cartId });
   const cart = data.site.cart;
   const checkout = data.site.checkout;
 
-  if (!cart) return emptyState;
+  if (!cart) {
+    return (
+      <CartEmptyState
+        cta={{ label: t('Empty.cta'), href: '/shop-all' }}
+        subtitle={t('Empty.subtitle')}
+        title={t('Empty.title')}
+      />
+    );
+  }
 
   const lineItems = [...cart.lineItems.physicalItems, ...cart.lineItems.digitalItems];
 
@@ -91,13 +62,17 @@ export default async function Cart({ params }: Props) {
           case 'CartSelectedMultipleChoiceOption':
           case 'CartSelectedCheckboxOption':
             return `${option.name}: ${option.value}`;
+
           case 'CartSelectedNumberFieldOption':
             return `${option.name}: ${option.number}`;
+
           case 'CartSelectedMultiLineTextFieldOption':
           case 'CartSelectedTextFieldOption':
             return `${option.name}: ${option.text}`;
+
           case 'CartSelectedDateFieldOption':
             return `${option.name}: ${format.dateTime(new Date(option.date.utc))}`;
+
           default:
             return '';
         }
@@ -111,122 +86,49 @@ export default async function Cart({ params }: Props) {
     variantEntityId: item.variantEntityId,
   }));
 
-  const totalCouponDiscount =
-    checkout?.coupons.reduce((sum, coupon) => sum + coupon.discountedAmount.value, 0) ?? 0;
-
-  const shippingConsignment =
-    checkout?.shippingConsignments?.find((consignment) => consignment.selectedShippingOption) ||
-    checkout?.shippingConsignments?.[0];
-
-  const shippingCountries = await getShippingCountries(data.geography);
-
-  const countries = shippingCountries.map((country) => ({
-    value: country.code,
-    label: country.name,
-  }));
-
-  const statesOrProvinces = shippingCountries.map((country) => ({
-    country: country.code,
-    states: country.statesOrProvinces.map((state) => ({
-      value: state.entityId.toString(),
-      label: state.name,
-    })),
-  }));
-
   return (
     <>
-      <Slot label="Cart top content" snapshotId="cart-top-content" />
-      <CartAnalyticsProvider data={Streamable.from(() => getAnalyticsData(cartId))}>
-        <CartComponent
-          cart={{
-            id: cartId,
-            lineItems: formattedLineItems,
-            total: format.number(checkout?.grandTotal?.value || 0, {
-              style: 'currency',
-              currency: cart.currencyCode,
-            }),
-            totalLabel: t('CheckoutSummary.total'),
-            summaryItems: [
-              {
-                label: t('CheckoutSummary.subTotal'),
-                value: format.number(checkout?.subtotal?.value ?? 0, {
-                  style: 'currency',
-                  currency: cart.currencyCode,
-                }),
-              },
-              cart.discountedAmount.value > 0
-                ? {
-                    label: t('CheckoutSummary.discounts'),
-                    value: `-${format.number(cart.discountedAmount.value, {
-                      style: 'currency',
-                      currency: cart.currencyCode,
-                    })}`,
-                  }
-                : null,
-              totalCouponDiscount > 0
-                ? {
-                    label: t('CheckoutSummary.CouponCode.couponCode'),
-                    value: `-${format.number(totalCouponDiscount, {
-                      style: 'currency',
-                      currency: cart.currencyCode,
-                    })}`,
-                  }
-                : null,
-              checkout?.taxTotal && {
-                label: t('CheckoutSummary.tax'),
-                value: format.number(checkout.taxTotal.value, {
-                  style: 'currency',
-                  currency: cart.currencyCode,
-                }),
-              },
-            ].filter(exists),
-          }}
-          checkoutAction={redirectToCheckout}
-          checkoutLabel={t('proceedToCheckout')}
-          couponCode={{
-            action: updateCouponCode,
-            couponCodes: checkout?.coupons.map((coupon) => coupon.code) ?? [],
-            ctaLabel: t('CheckoutSummary.CouponCode.apply'),
-            label: t('CheckoutSummary.CouponCode.couponCode'),
-            removeLabel: t('CheckoutSummary.CouponCode.removeCouponCode'),
-          }}
-          decrementLineItemLabel={t('decrement')}
-          deleteLineItemLabel={t('removeItem')}
-          emptyState={{
-            title: t('Empty.title'),
-            subtitle: t('Empty.subtitle'),
-            cta: { label: t('Empty.cta'), href: '/shop-all' },
-          }}
-          incrementLineItemLabel={t('increment')}
-          key={`${cart.entityId}-${cart.version}`}
-          lineItemAction={updateLineItem}
-          shipping={{
-            action: updateShippingInfo,
-            countries,
-            states: statesOrProvinces,
-            address: shippingConsignment?.address
-              ? {
-                  country: shippingConsignment.address.countryCode,
-                  city: shippingConsignment.address.city || undefined,
-                  state: shippingConsignment.address.stateOrProvince || undefined,
-                  postalCode: shippingConsignment.address.postalCode || undefined,
-                }
-              : undefined,
-            shippingOptions: shippingConsignment?.availableShippingOptions
-              ? shippingConsignment.availableShippingOptions.map((option) => ({
-                  label: option.description,
-                  value: option.entityId,
-                  price: format.number(option.cost.value, {
-                    style: 'currency',
-                    currency: cart.currencyCode,
-                  }),
-                }))
-              : [],
-          }}
-        />
-      </CartAnalyticsProvider>
-      <CartViewed />
-      <Slot label="Cart bottom content" snapshotId="cart-bottom-content" />
+      <CartComponent
+        checkoutAction={redirectToCheckout}
+        decrementLineItemLabel={t('decrement')}
+        deleteLineItemLabel={t('removeItem')}
+        emptyState={{
+          title: t('Empty.title'),
+          subtitle: t('Empty.subtitle'),
+          cta: { label: t('Empty.cta'), href: '/shop-all' },
+        }}
+        incrementLineItemLabel={t('increment')}
+        key={`${cart.entityId}-${cart.version}`}
+        lineItemAction={updateLineItem}
+        lineItems={formattedLineItems}
+        summary={{
+          title: t('CheckoutSummary.title'),
+          taxLabel: t('CheckoutSummary.tax'),
+          tax: checkout?.taxTotal
+            ? format.number(checkout.taxTotal.value, {
+                style: 'currency',
+                currency: cart.currencyCode,
+              })
+            : '',
+          subtotalLabel: t('CheckoutSummary.subTotal'),
+          subtotal: format.number(checkout?.subtotal?.value ?? 0, {
+            style: 'currency',
+            currency: cart.currencyCode,
+          }),
+          grandTotalLabel: t('CheckoutSummary.grandTotal'),
+          grandTotal: format.number(checkout?.grandTotal?.value || 0, {
+            style: 'currency',
+            currency: cart.currencyCode,
+          }),
+          ctaLabel: t('proceedToCheckout'),
+        }}
+        title={t('title')}
+      />
+      <CartViewed
+        currencyCode={cart.currencyCode}
+        lineItems={lineItems}
+        subtotal={checkout?.subtotal?.value}
+      />
     </>
   );
 }

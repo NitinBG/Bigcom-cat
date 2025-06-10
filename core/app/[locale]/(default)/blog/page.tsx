@@ -1,14 +1,13 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import { SearchParams } from 'nuqs';
 import { createSearchParamsCache, parseAsInteger, parseAsString } from 'nuqs/server';
 
-import { Streamable } from '@/vibes/soul/lib/streamable';
 import { FeaturedBlogPostList } from '@/vibes/soul/sections/featured-blog-post-list';
 import { defaultPageInfo, pageInfoTransformer } from '~/data-transformers/page-info-transformer';
 
-import { getBlog, getBlogPosts } from './page-data';
+import { getBlog, getBlogMetaData, getBlogPosts } from './page-data';
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -24,19 +23,8 @@ const searchParamsCache = createSearchParamsCache({
   limit: parseAsInteger.withDefault(defaultPostLimit),
 });
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { locale } = await params;
-
-  const t = await getTranslations({ locale, namespace: 'Blog' });
-  const blog = await getBlog();
-
-  return {
-    title: blog?.name ?? t('title'),
-    description:
-      blog?.description && blog.description.length > 150
-        ? `${blog.description.substring(0, 150)}...`
-        : blog?.description,
-  };
+export async function generateMetadata(): Promise<Metadata> {
+  return await getBlogMetaData();
 }
 
 async function listBlogPosts(searchParamsPromise: Promise<SearchParams>) {
@@ -67,12 +55,6 @@ async function getPaginationInfo(searchParamsPromise: Promise<SearchParams>) {
 }
 
 export default async function Blog(props: Props) {
-  const { locale } = await props.params;
-
-  setRequestLocale(locale);
-
-  const t = await getTranslations('Blog');
-
   const searchParamsParsed = searchParamsCache.parse(await props.searchParams);
   const { tag } = searchParamsParsed;
   const blog = await getBlog();
@@ -87,7 +69,7 @@ export default async function Blog(props: Props) {
     <FeaturedBlogPostList
       breadcrumbs={[
         {
-          label: t('home'),
+          label: 'Home',
           href: '/',
         },
         {
@@ -97,11 +79,11 @@ export default async function Blog(props: Props) {
         ...tagCrumb,
       ]}
       description={blog.description}
-      emptyStateSubtitle={Streamable.from(getEmptyStateSubtitle)}
-      emptyStateTitle={Streamable.from(getEmptyStateTitle)}
-      paginationInfo={Streamable.from(() => getPaginationInfo(props.searchParams))}
+      emptyStateSubtitle={getEmptyStateSubtitle()}
+      emptyStateTitle={getEmptyStateTitle()}
+      paginationInfo={getPaginationInfo(props.searchParams)}
       placeholderCount={6}
-      posts={Streamable.from(() => listBlogPosts(props.searchParams))}
+      posts={listBlogPosts(props.searchParams)}
       title={blog.name}
     />
   );

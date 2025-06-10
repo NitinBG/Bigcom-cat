@@ -1,4 +1,4 @@
-import { Color, Group } from '@makeswift/runtime/controls';
+import { Color, Shape } from '@makeswift/runtime/controls';
 
 import { hsl } from '~/lib/makeswift/utils/color';
 
@@ -11,19 +11,19 @@ const colorGroup = (
     scrollbar: string;
   },
 ) =>
-  Group({
+  Shape({
     label,
-    preferredLayout: Group.Layout.Inline,
-    props: {
+    layout: Shape.Layout.Inline,
+    type: {
       button: Color({ label: 'Button', defaultValue: defaults.button }),
       scrollbar: Color({ label: 'Scrollbar', defaultValue: defaults.scrollbar }),
     },
   });
 
-export const carousel = Group({
+export const carousel = Shape({
   label: 'Carousel',
-  preferredLayout: Group.Layout.Popover,
-  props: {
+  layout: Shape.Layout.Popover,
+  type: {
     focus: Color({ label: 'Focus', defaultValue: hsl(colors.primary) }),
     light: colorGroup('Light', {
       button: hsl(colors.foreground),

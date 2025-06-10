@@ -10,27 +10,22 @@ import {
   useInputControl,
 } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
-import { useTranslations } from 'next-intl';
 import { createSerializer, parseAsString, useQueryStates } from 'nuqs';
-import { ReactNode, startTransition, useActionState, useCallback, useEffect } from 'react';
-import { requestFormReset, useFormStatus } from 'react-dom';
+import { ReactNode, useActionState, useCallback, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
 import { z } from 'zod';
 
 import { ButtonRadioGroup } from '@/vibes/soul/form/button-radio-group';
 import { CardRadioGroup } from '@/vibes/soul/form/card-radio-group';
 import { Checkbox } from '@/vibes/soul/form/checkbox';
-import { DatePicker } from '@/vibes/soul/form/date-picker';
 import { FormStatus } from '@/vibes/soul/form/form-status';
 import { Input } from '@/vibes/soul/form/input';
 import { NumberInput } from '@/vibes/soul/form/number-input';
 import { RadioGroup } from '@/vibes/soul/form/radio-group';
 import { Select } from '@/vibes/soul/form/select';
 import { SwatchRadioGroup } from '@/vibes/soul/form/swatch-radio-group';
-import { Textarea } from '@/vibes/soul/form/textarea';
 import { Button } from '@/vibes/soul/primitives/button';
 import { toast } from '@/vibes/soul/primitives/toaster';
-import { useAddToQuote, useAddToShoppingList } from '~/b2b/use-product-details';
-import { useEvents } from '~/components/analytics/events';
 import { usePathname, useRouter } from '~/i18n/routing';
 
 import { Field, schema, SchemaRawShape } from './schema';
@@ -45,7 +40,7 @@ interface State<F extends Field> {
 
 export type ProductDetailFormAction<F extends Field> = Action<State<F>, FormData>;
 
-export interface ProductDetailFormProps<F extends Field> {
+interface Props<F extends Field> {
   fields: F[];
   action: ProductDetailFormAction<F>;
   productId: string;
@@ -53,10 +48,8 @@ export interface ProductDetailFormProps<F extends Field> {
   quantityLabel?: string;
   incrementLabel?: string;
   decrementLabel?: string;
-  emptySelectPlaceholder?: string;
   ctaDisabled?: boolean;
   prefetch?: boolean;
-  additionalActions?: ReactNode;
 }
 
 export function ProductDetailForm<F extends Field>({
@@ -67,14 +60,11 @@ export function ProductDetailForm<F extends Field>({
   quantityLabel = 'Quantity',
   incrementLabel = 'Increase quantity',
   decrementLabel = 'Decrease quantity',
-  emptySelectPlaceholder = 'Select an option',
   ctaDisabled = false,
   prefetch = false,
-  additionalActions,
-}: ProductDetailFormProps<F>) {
+}: Props<F>) {
   const router = useRouter();
   const pathname = usePathname();
-  const events = useEvents();
 
   const searchParams = fields.reduce<Record<string, typeof parseAsString>>((acc, field) => {
     return field.persist === true ? { ...acc, [field.name]: parseAsString } : acc;
@@ -110,56 +100,14 @@ export function ProductDetailForm<F extends Field>({
   useEffect(() => {
     if (lastResult?.status === 'success') {
       toast.success(successMessage);
-
-      // This is needed to refresh the Data Cache after the product has been added to the cart.
-      // The cart id is not picked up after the first time the cart is created/updated.
-      router.refresh();
     }
-  }, [lastResult, successMessage, router]);
-
-  const t = useTranslations('Product.ProductDetails');
-  const { isQuotesEnabled, isAddingToQuote, addProductsToQuote } = useAddToQuote();
-  const { isShoppingListEnabled, isAddingToShoppingList, addProductToShoppingList } =
-    useAddToShoppingList();
+  }, [lastResult, successMessage]);
 
   const [form, formFields] = useForm({
     lastResult,
     constraint: getZodConstraint(schema(fields)),
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: schema(fields) });
-    },
-    onSubmit: (event, { formData, submission }) => {
-      event.preventDefault();
-
-      if (submission?.status !== 'success' || !formData.has('intent')) {
-        startTransition(() => {
-          requestFormReset(event.currentTarget);
-          formAction(formData);
-
-          events.onAddToCart?.(formData);
-        });
-
-        return;
-      }
-
-      const selectedOptions = fields.map((field) => ({
-        field,
-        value: submission.value[field.name],
-      }));
-
-      if (formData.get('intent') === 'add-to-quote') {
-        void addProductsToQuote({
-          productId,
-          quantity: Number(submission.value.quantity),
-          selectedOptions,
-        });
-      } else if (formData.get('intent') === 'add-to-shopping-list') {
-        void addProductToShoppingList({
-          productId,
-          quantity: Number(submission.value.quantity),
-          selectedOptions,
-        });
-      }
     },
     // @ts-expect-error: `defaultValue` types are conflicting with `onValidate`.
     defaultValue,
@@ -178,7 +126,6 @@ export function ProductDetailForm<F extends Field>({
           {fields.map((field) => {
             return (
               <FormField
-                emptySelectPlaceholder={emptySelectPlaceholder}
                 field={field}
                 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 formField={formFields[field.name]!}
@@ -206,39 +153,7 @@ export function ProductDetailForm<F extends Field>({
               required
               value={quantityControl.value}
             />
-            <div className="flex flex-1 gap-x-3">
-              <SubmitButton disabled={ctaDisabled}>{ctaLabel}</SubmitButton>
-
-              {isQuotesEnabled && (
-                <Button
-                  className="flex-1"
-                  loading={isAddingToQuote}
-                  name="intent"
-                  size="medium"
-                  type="submit"
-                  value="add-to-quote"
-                  variant="secondary"
-                >
-                  {t('addToQuote')}
-                </Button>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-1 gap-x-3">
-            {isShoppingListEnabled && (
-              <Button
-                className="flex-1"
-                loading={isAddingToShoppingList}
-                name="intent"
-                size="medium"
-                type="submit"
-                value="add-to-shopping-list"
-                variant="tertiary"
-              >
-                {t('addToShoppingList')}
-              </Button>
-            )}
-            {additionalActions}
+            <SubmitButton disabled={ctaDisabled}>{ctaLabel}</SubmitButton>
           </div>
         </div>
       </form>
@@ -246,7 +161,7 @@ export function ProductDetailForm<F extends Field>({
   );
 }
 
-function SubmitButton({ children, disabled }: { children: ReactNode; disabled?: boolean }) {
+function SubmitButton({ children, disabled }: { children: React.ReactNode; disabled?: boolean }) {
   const { pending } = useFormStatus();
 
   return (
@@ -262,33 +177,27 @@ function SubmitButton({ children, disabled }: { children: ReactNode; disabled?: 
   );
 }
 
-// eslint-disable-next-line complexity
 function FormField({
   field,
   formField,
   onPrefetch,
-  emptySelectPlaceholder,
 }: {
   field: Field;
   formField: FieldMetadata<string | number | boolean | Date | undefined>;
   onPrefetch: (fieldName: string, value: string) => void;
-  emptySelectPlaceholder?: string;
 }) {
   const controls = useInputControl(formField);
 
-  const [params, setParams] = useQueryStates(
+  const [, setParams] = useQueryStates(
     field.persist === true ? { [field.name]: parseAsString.withOptions({ shallow: false }) } : {},
   );
 
   const handleChange = useCallback(
     (value: string) => {
-      // Ensure that if page is reached without a full reload, we are still setting the selection properly based on query params.
-      const fieldValue = value || String(params[field.name] ?? '');
-
-      void setParams({ [field.name]: fieldValue });
-      controls.change(fieldValue);
+      void setParams({ [field.name]: value });
+      controls.change(value);
     },
-    [setParams, field, controls, params],
+    [setParams, field, controls],
   );
 
   const handleOnOptionMouseEnter = (value: string) => {
@@ -330,38 +239,6 @@ function FormField({
         />
       );
 
-    case 'date':
-      return (
-        <DatePicker
-          defaultValue={controls.value}
-          errors={formField.errors}
-          key={formField.id}
-          label={field.label}
-          name={formField.name}
-          onBlur={controls.blur}
-          onChange={(e) => handleChange(e.currentTarget.value)}
-          onFocus={controls.focus}
-          required={formField.required}
-        />
-      );
-
-    case 'textarea':
-      return (
-        <Textarea
-          errors={formField.errors}
-          key={formField.id}
-          label={field.label}
-          maxLength={field.maxLength}
-          minLength={field.minLength}
-          name={formField.name}
-          onBlur={controls.blur}
-          onChange={(e) => handleChange(e.currentTarget.value)}
-          onFocus={controls.focus}
-          required={formField.required}
-          value={controls.value ?? ''}
-        />
-      );
-
     case 'checkbox':
       return (
         <Checkbox
@@ -389,7 +266,6 @@ function FormField({
           onOptionMouseEnter={handleOnOptionMouseEnter}
           onValueChange={handleChange}
           options={field.options}
-          placeholder={emptySelectPlaceholder}
           required={formField.required}
           value={controls.value ?? ''}
         />

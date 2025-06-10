@@ -3,14 +3,12 @@
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports
 import NextImage, { ImageProps } from 'next/image';
 
-import { buildConfig } from '~/build-config/reader';
 import bcCdnImageLoader from '~/lib/cdn-image-loader';
 
+const cdnHostname = process.env.BIGCOMMERCE_CDN_HOSTNAME ?? 'cdn11.bigcommerce.com';
+
 function shouldUseLoaderProp(props: ImageProps): boolean {
-  return (
-    typeof props.src === 'string' &&
-    props.src.startsWith(`https://${buildConfig.get('urls').cdnUrl}`)
-  );
+  return typeof props.src === 'string' && props.src.startsWith(`https://${cdnHostname}`);
 }
 
 /**

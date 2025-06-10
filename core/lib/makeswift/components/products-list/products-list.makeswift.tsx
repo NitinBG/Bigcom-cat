@@ -2,22 +2,22 @@
 
 import {
   Combobox,
-  Group,
   List,
   Number,
   Select,
+  Shape,
   Style,
   TextInput,
 } from '@makeswift/runtime/controls';
 import { ComponentPropsWithoutRef } from 'react';
 
-import { ProductList, ProductListSkeleton } from '@/vibes/soul/sections/product-list';
+import { ProductsList, ProductsListSkeleton } from '@/vibes/soul/primitives/products-list';
 import { runtime } from '~/lib/makeswift/runtime';
 
 import { searchProducts } from '../../utils/search-products';
 import { useProducts } from '../../utils/use-products';
 
-type MSProductsListProps = Omit<ComponentPropsWithoutRef<typeof ProductList>, 'products'> & {
+type MSProductsListProps = Omit<ComponentPropsWithoutRef<typeof ProductsList>, 'products'> & {
   className: string;
   collection: 'none' | 'best-selling' | 'newest' | 'featured';
   limit: number;
@@ -42,14 +42,14 @@ runtime.registerComponent(
     });
 
     if (isLoading) {
-      return <ProductListSkeleton className={className} />;
+      return <ProductsListSkeleton className={className} />;
     }
 
     if (products == null || products.length === 0) {
-      return <ProductListSkeleton className={className} />;
+      return <ProductsListSkeleton className={className} />;
     }
 
-    return <ProductList {...props} className={className} products={products} />;
+    return <ProductsList {...props} className={className} products={products} />;
   },
   {
     type: 'primitive-products-list',
@@ -70,9 +70,8 @@ runtime.registerComponent(
       limit: Number({ label: 'Max collection items', defaultValue: 12 }),
       additionalProducts: List({
         label: 'Additional products',
-        type: Group({
-          label: 'Product',
-          props: {
+        type: Shape({
+          type: {
             title: TextInput({ label: 'Title', defaultValue: 'Product title' }),
             entityId: Combobox({
               label: 'Product',

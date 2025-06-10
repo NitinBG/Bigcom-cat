@@ -39,7 +39,8 @@ export const cloneCatalyst = ({
       // Reset it to the specified ref
       resetBranchToRef(projectDir, ghRef);
 
-      console.log(`Reset main to ${ghRef} successfully.\n`);
+      console.log(`Reset main to ${ghRef} successfully.`);
+      console.log();
 
       return;
     }

@@ -1,6 +1,5 @@
-import { Color, Group, Number } from '@makeswift/runtime/controls';
+import { Color, Number, Shape } from '@makeswift/runtime/controls';
 
-import { FontFamily } from '~/lib/makeswift/controls/font-tokens';
 import { hsl } from '~/lib/makeswift/utils/color';
 
 import { colors } from '../base-colors';
@@ -13,21 +12,20 @@ const colorGroup = (
     icon: string;
   },
 ) =>
-  Group({
+  Shape({
     label,
-    preferredLayout: Group.Layout.Inline,
-    props: {
+    layout: Shape.Layout.Inline,
+    type: {
       background: Color({ label: 'Background', defaultValue: defaults.background }),
       text: Color({ label: 'Text', defaultValue: defaults.text }),
       icon: Color({ label: 'Icon', defaultValue: defaults.icon }),
     },
   });
 
-export const card = Group({
+export const card = Shape({
   label: 'Card',
-  preferredLayout: Group.Layout.Popover,
-  props: {
-    fontFamily: FontFamily({ label: 'Font', defaultValue: FontFamily.Body }),
+  layout: Shape.Layout.Popover,
+  type: {
     borderRadius: Number({ label: 'Border radius', suffix: 'px', defaultValue: 16 }),
     focus: Color({ label: 'Focus', defaultValue: hsl(colors.primary) }),
     light: colorGroup('Light', {

@@ -1,8 +1,7 @@
 import { useFormatter } from 'next-intl';
-import { useCallback } from 'react';
 import { string, z } from 'zod';
 
-import { Product } from '@/vibes/soul/primitives/product-card';
+import { CardProduct } from '@/vibes/soul/primitives/product-card';
 import { pricesTransformer } from '~/data-transformers/prices-transformer';
 
 const priceSchema = z.object({
@@ -32,23 +31,20 @@ export const BcProductSchema = z.object({
 
 export type BcProductSchema = z.infer<typeof BcProductSchema>;
 
-export function useBcProductToVibesProduct(): (product: BcProductSchema) => Product {
+export function useBcProductToVibesProduct(): (product: BcProductSchema) => CardProduct {
   const format = useFormatter();
 
-  return useCallback(
-    (product) => {
-      const { entityId, name, defaultImage, brand, path, prices } = product;
-      const price = pricesTransformer(prices, format);
+  return (product) => {
+    const { entityId, name, defaultImage, brand, path, prices } = product;
+    const price = pricesTransformer(prices, format);
 
-      return {
-        id: entityId.toString(),
-        title: name,
-        href: path,
-        image: defaultImage ? { src: defaultImage.url, alt: defaultImage.altText } : undefined,
-        price,
-        subtitle: brand?.name,
-      };
-    },
-    [format],
-  );
+    return {
+      id: entityId.toString(),
+      title: name,
+      href: path,
+      image: defaultImage ? { src: defaultImage.url, alt: defaultImage.altText } : undefined,
+      price,
+      subtitle: brand?.name,
+    };
+  };
 }

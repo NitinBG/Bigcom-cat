@@ -1,7 +1,5 @@
-import { BigCommerceAuthError, createClient } from '@bigcommerce/catalyst-client';
+import { createClient } from '@bigcommerce/catalyst-client';
 import { headers } from 'next/headers';
-// eslint-disable-next-line @typescript-eslint/no-restricted-imports
-import { redirect } from 'next/navigation';
 import { getLocale as getServerLocale } from 'next-intl/server';
 
 import { getChannelIdFromLocale } from '../channels.config';
@@ -61,10 +59,5 @@ export const client = createClient({
     return {
       headers: requestHeaders,
     };
-  },
-  onError: (error, queryType) => {
-    if (error instanceof BigCommerceAuthError && queryType === 'query') {
-      redirect('?invalidate-session');
-    }
   },
 });

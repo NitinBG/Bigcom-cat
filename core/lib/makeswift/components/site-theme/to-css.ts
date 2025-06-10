@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/consistent-type-definitions */
 
+// eslint-disable-next-line @typescript-eslint/consistent-indexed-object-style
 export type ThemeProps = {
   [key in string]?: string | number | ThemeProps;
 };

@@ -44,8 +44,6 @@ type TextAreaField = {
   type: 'textarea';
   defaultValue?: string;
   pattern?: string;
-  minLength?: number;
-  maxLength?: number;
 } & FormField;
 
 type DateField = {
@@ -128,7 +126,6 @@ export function schema(fields: Field[]): z.ZodObject<SchemaRawShape> {
 
   fields.forEach((field) => {
     let fieldSchema: z.ZodString | z.ZodNumber;
-
     switch (field.type) {
       case 'number':
         fieldSchema = z.number();
@@ -138,15 +135,6 @@ export function schema(fields: Field[]): z.ZodObject<SchemaRawShape> {
 
         shape[field.name] = fieldSchema;
         break;
-
-      case 'textarea':
-        fieldSchema = z.string();
-        if (field.minLength != null) fieldSchema = fieldSchema.min(field.minLength);
-        if (field.maxLength != null) fieldSchema = fieldSchema.max(field.maxLength);
-
-        shape[field.name] = fieldSchema;
-        break;
-
       default:
         fieldSchema = z.string();
 

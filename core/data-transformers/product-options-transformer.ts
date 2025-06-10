@@ -3,10 +3,10 @@ import { ResultOf } from 'gql.tada';
 import { getTranslations } from 'next-intl/server';
 
 import { Field } from '@/vibes/soul/sections/product-detail/schema';
-import { ProductOptionsFragment } from '~/app/[locale]/(default)/product/[slug]/page-data';
+import { ProductFormFragment } from '~/app/[locale]/(default)/product/[slug]/page-data';
 
 export const productOptionsTransformer = async (
-  productOptions: ResultOf<typeof ProductOptionsFragment>['productOptions'],
+  productOptions: ResultOf<typeof ProductFormFragment>['productOptions'],
 ) => {
   const t = await getTranslations('Product.ProductDetails');
 
@@ -18,7 +18,6 @@ export const productOptionsTransformer = async (
         switch (option.displayStyle) {
           case 'Swatch': {
             return {
-              id: option.entityId,
               persist: option.isVariantOption,
               type: 'swatch-radio-group',
               label: option.displayName,
@@ -33,7 +32,6 @@ export const productOptionsTransformer = async (
                   if (value.imageUrl) {
                     return {
                       type: 'image',
-                      id: value.entityId,
                       label: value.label,
                       value: value.entityId.toString(),
                       image: { src: value.imageUrl, alt: value.label },
@@ -42,7 +40,6 @@ export const productOptionsTransformer = async (
 
                   return {
                     type: 'color',
-                    id: value.entityId,
                     label: value.label,
                     value: value.entityId.toString(),
                     color: value.hexColors[0] ?? '',
@@ -53,7 +50,6 @@ export const productOptionsTransformer = async (
 
           case 'RectangleBoxes': {
             return {
-              id: option.entityId,
               persist: option.isVariantOption,
               type: 'button-radio-group',
               label: option.displayName,
@@ -61,7 +57,6 @@ export const productOptionsTransformer = async (
               name: option.entityId.toString(),
               defaultValue: values.find((value) => value.isDefault)?.entityId.toString(),
               options: values.map((value) => ({
-                id: value.entityId,
                 label: value.label,
                 value: value.entityId.toString(),
               })),
@@ -70,7 +65,6 @@ export const productOptionsTransformer = async (
 
           case 'RadioButtons': {
             return {
-              id: option.entityId,
               persist: option.isVariantOption,
               type: 'radio-group',
               label: option.displayName,
@@ -78,7 +72,6 @@ export const productOptionsTransformer = async (
               name: option.entityId.toString(),
               defaultValue: values.find((value) => value.isDefault)?.entityId.toString(),
               options: values.map((value) => ({
-                id: value.entityId,
                 label: value.label,
                 value: value.entityId.toString(),
               })),
@@ -87,7 +80,6 @@ export const productOptionsTransformer = async (
 
           case 'DropdownList': {
             return {
-              id: option.entityId,
               persist: option.isVariantOption,
               type: 'select',
               label: option.displayName,
@@ -95,7 +87,6 @@ export const productOptionsTransformer = async (
               name: option.entityId.toString(),
               defaultValue: values.find((value) => value.isDefault)?.entityId.toString(),
               options: values.map((value) => ({
-                id: value.entityId,
                 label: value.label,
                 value: value.entityId.toString(),
               })),
@@ -105,7 +96,6 @@ export const productOptionsTransformer = async (
           case 'ProductPickList':
           case 'ProductPickListWithImages': {
             return {
-              id: option.entityId,
               persist: option.isVariantOption,
               type: 'card-radio-group',
               label: option.displayName,
@@ -118,7 +108,6 @@ export const productOptionsTransformer = async (
                     '__typename' in value && value.__typename === 'ProductPickListOptionValue',
                 )
                 .map((value) => ({
-                  id: value.entityId,
                   label: value.label,
                   value: value.entityId.toString(),
                   image: {
@@ -136,7 +125,6 @@ export const productOptionsTransformer = async (
 
       if (option.__typename === 'CheckboxOption') {
         return {
-          id: option.entityId,
           persist: option.isVariantOption,
           type: 'checkbox',
           label: option.displayName,
@@ -150,7 +138,6 @@ export const productOptionsTransformer = async (
 
       if (option.__typename === 'NumberFieldOption') {
         return {
-          id: option.entityId,
           persist: option.isVariantOption,
           type: 'number',
           label: option.displayName,
@@ -168,21 +155,17 @@ export const productOptionsTransformer = async (
 
       if (option.__typename === 'MultiLineTextFieldOption') {
         return {
-          id: option.entityId,
           persist: option.isVariantOption,
           type: 'textarea',
           label: option.displayName,
           required: option.isRequired,
           name: option.entityId.toString(),
           defaultValue: option.defaultText ?? undefined,
-          minLength: option.minLength ?? undefined,
-          maxLength: option.maxLength ?? undefined,
         };
       }
 
       if (option.__typename === 'TextFieldOption') {
         return {
-          id: option.entityId,
           persist: option.isVariantOption,
           type: 'text',
           label: option.displayName,
@@ -194,7 +177,6 @@ export const productOptionsTransformer = async (
 
       if (option.__typename === 'DateFieldOption') {
         return {
-          id: option.entityId,
           persist: option.isVariantOption,
           type: 'date',
           label: option.displayName,

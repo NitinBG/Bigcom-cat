@@ -17,8 +17,7 @@
     "skipLibCheck": true,
     "strict": true,
     "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
-    "resolveJsonModule": true,
-    "lib": ["esnext"]
+    "resolveJsonModule": true
   },
   "exclude": ["node_modules"]
 }

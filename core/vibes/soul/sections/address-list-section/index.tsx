@@ -2,22 +2,14 @@
 
 import { getFormProps, getInputProps, SubmissionResult, useForm } from '@conform-to/react';
 import { getZodConstraint, parseWithZod } from '@conform-to/zod';
-import {
-  ComponentProps,
-  ReactNode,
-  startTransition,
-  useActionState,
-  useEffect,
-  useOptimistic,
-  useState,
-} from 'react';
+import { startTransition, useActionState, useEffect, useOptimistic, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { z } from 'zod';
 
-import { DynamicForm } from '@/vibes/soul/form/dynamic-form';
-import { Field, FieldGroup } from '@/vibes/soul/form/dynamic-form/schema';
 import { Badge } from '@/vibes/soul/primitives/badge';
 import { Button } from '@/vibes/soul/primitives/button';
+import { DynamicForm } from '@/vibes/soul/primitives/dynamic-form';
+import { Field, FieldGroup } from '@/vibes/soul/primitives/dynamic-form/schema';
 import { Spinner } from '@/vibes/soul/primitives/spinner';
 import { toast } from '@/vibes/soul/primitives/toaster';
 
@@ -38,7 +30,7 @@ interface State<A extends Address, F extends Field> {
   fields: Array<F | FieldGroup<F>>;
 }
 
-export interface AddressListSectionProps<A extends Address, F extends Field> {
+interface Props<A extends Address, F extends Field> {
   title?: string;
   addresses: A[];
   fields: Array<F | FieldGroup<F>>;
@@ -54,22 +46,6 @@ export interface AddressListSectionProps<A extends Address, F extends Field> {
   cancelLabel?: string;
 }
 
-// eslint-disable-next-line valid-jsdoc
-/**
- * This component supports various CSS variables for theming. Here's a comprehensive list, along
- * with their default values:
- *
- * ```css
- * :root {
- *   --address-list-section-border: hsl(var(--contrast-100));
- *   --address-list-section-title-font-family: var(--font-family-heading);
- *   --address-list-section-content-font-family: var(--font-family-body);
- *   --address-list-section-title: hsl(var(--foreground));
- *   --address-list-section-name: hsl(var(--foreground));
- *   --address-list-section-info: hsl(var(--contrast-500));
- * }
- * ```
- */
 export function AddressListSection<A extends Address, F extends Field>({
   title = 'Addresses',
   addresses,
@@ -84,7 +60,7 @@ export function AddressListSection<A extends Address, F extends Field>({
   cancelLabel = 'Cancel',
   showAddFormLabel = 'Add address',
   setDefaultLabel = 'Set as default',
-}: AddressListSectionProps<A, F>) {
+}: Props<A, F>) {
   const [state, formAction] = useActionState(addressAction, {
     addresses,
     defaultAddress,
@@ -150,20 +126,18 @@ export function AddressListSection<A extends Address, F extends Field>({
   }, [form.errors]);
 
   return (
-    <section className="w-full">
-      <header className="mb-4 border-b border-[var(--address-list-section-border,hsl(var(--contrast-100)))]">
-        <div className="mb-4 flex items-center justify-between">
-          <Title>{title}</Title>
-          {!showNewAddressForm && (
-            <Button onClick={() => setShowNewAddressForm(true)} size="small">
-              {showAddFormLabel}
-            </Button>
-          )}
-        </div>
-      </header>
+    <div>
+      <div className="flex items-center justify-between">
+        <Title>{title}</Title>
+        {!showNewAddressForm && (
+          <Button onClick={() => setShowNewAddressForm(true)} size="small">
+            {showAddFormLabel}
+          </Button>
+        )}
+      </div>
       <div>
         {showNewAddressForm && (
-          <div className="border-b border-[var(--address-list-section-border,hsl(var(--contrast-100)))] pt-5 pb-6">
+          <div className="border-b border-contrast-200 pb-6 pt-5">
             <div className="w-[480px] space-y-4">
               <DynamicForm
                 action={(_prevState, formData) => {
@@ -218,10 +192,7 @@ export function AddressListSection<A extends Address, F extends Field>({
           });
 
           return (
-            <div
-              className="border-b border-[var(--address-list-section-border,hsl(var(--contrast-100)))] pt-5 pb-6"
-              key={address.id}
-            >
+            <div className="border-b border-contrast-200 pb-6 pt-5" key={address.id}>
               {activeAddressIds.includes(address.id) ? (
                 <div className="w-[480px] space-y-4">
                   <DynamicForm
@@ -309,15 +280,15 @@ export function AddressListSection<A extends Address, F extends Field>({
           );
         })}
       </div>
-    </section>
+    </div>
   );
 }
 
-function Title({ children }: { children: ReactNode }) {
+function Title({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
 
   return (
-    <h1 className="font-[family-name:var(--address-list-section-title-font-family,var(--font-family-heading))] text-4xl text-[var(--address-list-section-title,hsl(var(--foreground)))]">
+    <h1 className="text-4xl">
       {children}
       {pending && (
         <span className="ml-2">
@@ -330,9 +301,9 @@ function Title({ children }: { children: ReactNode }) {
 
 function AddressPreview({ address, isDefault = false }: { address: Address; isDefault?: boolean }) {
   return (
-    <div className="flex gap-10 font-[family-name:var(--address-list-section-content-font-family,var(--font-family-body))]">
-      <div className="text-sm text-[var(--address-list-section-info,hsl(var(--contrast-500)))]">
-        <p className="font-bold text-[var(--address-list-section-name,hsl(var(--foreground)))]">
+    <div className="flex gap-10">
+      <div className="text-sm">
+        <p className="font-bold">
           {address.firstName} {address.lastName}
         </p>
         <p>{address.company}</p>
@@ -360,7 +331,7 @@ function AddressActionButton({
   intent: string;
   action: (formData: FormData) => void;
   onSubmit: (formData: FormData) => void;
-} & Omit<ComponentProps<'button'>, 'onSubmit'>) {
+} & Omit<React.ComponentProps<'button'>, 'onSubmit'>) {
   const [form, fields] = useForm({
     // @ts-expect-error The form requires index signature values to be of
     // type 'string', 'null', or 'undefined' but the zod .passthrough() method

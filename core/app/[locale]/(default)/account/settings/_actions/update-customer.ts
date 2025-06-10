@@ -5,12 +5,13 @@ import { parseWithZod } from '@conform-to/zod';
 import { unstable_expireTag } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 
-import { updateAccountSchema } from '@/vibes/soul/sections/account-settings/schema';
-import { UpdateAccountAction } from '@/vibes/soul/sections/account-settings/update-account-form';
+import { updateAccountSchema } from '@/vibes/soul/sections/account-settings-section/schema';
 import { getSessionCustomerAccessToken } from '~/auth';
 import { client } from '~/client';
 import { graphql } from '~/client/graphql';
 import { TAGS } from '~/client/tags';
+
+import { UpdateAccountAction } from '../../../../../../vibes/soul/sections/account-settings-section/update-account-form';
 
 const UpdateCustomerMutation = graphql(`
   mutation UpdateCustomerMutation($input: UpdateCustomerInput!) {
@@ -44,7 +45,7 @@ const UpdateCustomerMutation = graphql(`
 `);
 
 export const updateCustomer: UpdateAccountAction = async (prevState, formData) => {
-  const t = await getTranslations('Account.Settings');
+  const t = await getTranslations('Register');
   const customerAccessToken = await getSessionCustomerAccessToken();
 
   const submission = parseWithZod(formData, { schema: updateAccountSchema });
@@ -79,7 +80,7 @@ export const updateCustomer: UpdateAccountAction = async (prevState, formData) =
 
     return {
       account: submission.value,
-      successMessage: t('passwordUpdated'),
+      successMessage: t('successfulUpdate'),
       lastResult: submission.reply(),
     };
   } catch (error) {
@@ -104,7 +105,7 @@ export const updateCustomer: UpdateAccountAction = async (prevState, formData) =
 
     return {
       account: prevState.account,
-      lastResult: submission.reply({ formErrors: [t('somethingWentWrong')] }),
+      lastResult: submission.reply({ formErrors: [t('Errors.error')] }),
     };
   }
 };

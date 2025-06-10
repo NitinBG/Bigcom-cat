@@ -1,3 +1,4 @@
+import { DraftModeScript } from '@makeswift/runtime/next/server';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { clsx } from 'clsx';
@@ -5,61 +6,48 @@ import type { Metadata } from 'next';
 import { draftMode } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
-import { setRequestLocale } from 'next-intl/server';
+import { getMessages, setRequestLocale } from 'next-intl/server';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
-import { cache, PropsWithChildren } from 'react';
+import { PropsWithChildren } from 'react';
 
-import '../../globals.css';
+import '../globals.css';
 
 import { fonts } from '~/app/fonts';
-import { CookieNotifications } from '~/app/notifications';
-import { Providers } from '~/app/providers';
-import { B2BLoader } from '~/b2b/loader';
 import { client } from '~/client';
 import { graphql } from '~/client/graphql';
 import { revalidate } from '~/client/revalidate-target';
-import { WebAnalyticsFragment } from '~/components/analytics/fragment';
-import { AnalyticsProvider } from '~/components/analytics/provider';
 import { routing } from '~/i18n/routing';
 import { SiteTheme } from '~/lib/makeswift/components/site-theme';
 import { MakeswiftProvider } from '~/lib/makeswift/provider';
+
+import { Notifications } from '../notifications';
+import { Providers } from '../providers';
+
 import '~/lib/makeswift/components';
 
-import { getToastNotification } from '~/lib/server-toast';
-
-const RootLayoutMetadataQuery = graphql(
-  `
-    query RootLayoutMetadataQuery {
-      site {
-        settings {
-          storeName
-          seo {
-            pageTitle
-            metaDescription
-            metaKeywords
-          }
-          ...WebAnalyticsFragment
+const RootLayoutMetadataQuery = graphql(`
+  query RootLayoutMetadataQuery {
+    site {
+      settings {
+        storeName
+        seo {
+          pageTitle
+          metaDescription
+          metaKeywords
         }
       }
-      channel {
-        entityId
-      }
     }
-  `,
-  [WebAnalyticsFragment],
-);
+  }
+`);
 
-const fetchRootLayoutMetadata = cache(async () => {
-  return await client.fetch({
+export async function generateMetadata(): Promise<Metadata> {
+  const { data } = await client.fetch({
     document: RootLayoutMetadataQuery,
     fetchOptions: { next: { revalidate } },
   });
-});
-
-export async function generateMetadata(): Promise<Metadata> {
-  const { data } = await fetchRootLayoutMetadata();
 
   const storeName = data.site.settings?.storeName ?? '';
+
   const { pageTitle, metaDescription, metaKeywords } = data.site.settings?.seo || {};
 
   return {
@@ -68,20 +56,21 @@ export async function generateMetadata(): Promise<Metadata> {
       default: pageTitle || storeName,
     },
     icons: {
-      icon: '/favicon.ico',
+      icon: '/favicon.ico', // app/favicon.ico/route.ts
     },
     description: metaDescription,
     keywords: metaKeywords ? metaKeywords.split(',') : null,
     other: {
       platform: 'bigcommerce.catalyst',
       build_sha: process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? '',
-      store_hash: process.env.BIGCOMMERCE_STORE_HASH ?? '',
     },
   };
 }
 
 const VercelComponents = () => {
-  if (process.env.VERCEL !== '1') return null;
+  if (process.env.VERCEL !== '1') {
+    return null;
+  }
 
   return (
     <>
@@ -98,38 +87,30 @@ interface Props extends PropsWithChildren {
 export default async function RootLayout({ params, children }: Props) {
   const { locale } = await params;
 
-  const { data } = await fetchRootLayoutMetadata();
-  const toastNotificationCookieData = await getToastNotification();
-
   if (!routing.locales.includes(locale)) {
     notFound();
   }
 
+  // need to call this method everywhere where static rendering is enabled
+  // https://next-intl-docs.vercel.app/docs/getting-started/app-router#add-setRequestLocale-to-all-layouts-and-pages
   setRequestLocale(locale);
+
+  const messages = await getMessages();
 
   return (
     <MakeswiftProvider previewMode={(await draftMode()).isEnabled}>
       <html className={clsx(fonts.map((f) => f.variable))} lang={locale}>
         <head>
           <SiteTheme />
+          <DraftModeScript appOrigin={process.env.MAKESWIFT_APP_ORIGIN} />
         </head>
-        <body className="flex min-h-screen flex-col">
-          <NextIntlClientProvider>
+        <body>
+          <Notifications />
+          <NextIntlClientProvider locale={locale} messages={messages}>
             <NuqsAdapter>
-              <AnalyticsProvider
-                channelId={data.channel.entityId}
-                settings={data.site.settings}
-              >
-                <Providers>
-                  {toastNotificationCookieData && (
-                    <CookieNotifications {...toastNotificationCookieData} />
-                  )}
-                  {children}
-                </Providers>
-              </AnalyticsProvider>
+              <Providers>{children}</Providers>
             </NuqsAdapter>
           </NextIntlClientProvider>
-          <B2BLoader />
           <VercelComponents />
         </body>
       </html>

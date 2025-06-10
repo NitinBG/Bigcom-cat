@@ -1,28 +1,19 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getFormatter, getTranslations, setRequestLocale } from 'next-intl/server';
-import { cache } from 'react';
+import { getFormatter } from 'next-intl/server';
 
+import { Breadcrumb } from '@/vibes/soul/primitives/breadcrumbs';
 import { BlogPostContent, BlogPostContentBlogPost } from '@/vibes/soul/sections/blog-post-content';
-import { Breadcrumb } from '@/vibes/soul/sections/breadcrumbs';
 
 import { getBlogPageData } from './page-data';
 
-const cachedBlogPageDataVariables = cache((blogId: string) => ({ entityId: Number(blogId) }));
-
 interface Props {
-  params: Promise<{
-    locale: string;
-    blogId: string;
-  }>;
+  params: Promise<{ blogId: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { blogId } = await params;
-
-  const variables = cachedBlogPageDataVariables(blogId);
-
-  const blog = await getBlogPageData(variables);
+  const blog = await getBlogPageData({ entityId: Number(blogId) });
   const blogPost = blog?.post;
 
   if (!blogPost) {
@@ -38,14 +29,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-async function getBlogPost(props: Props): Promise<BlogPostContentBlogPost> {
+async function getBlogPost(entityId: number): Promise<BlogPostContentBlogPost> {
   const format = await getFormatter();
-
-  const { blogId } = await props.params;
-
-  const variables = cachedBlogPageDataVariables(blogId);
-
-  const blog = await getBlogPageData(variables);
+  const blog = await getBlogPageData({ entityId });
   const blogPost = blog?.post;
 
   if (!blog || !blogPost) {
@@ -69,14 +55,8 @@ async function getBlogPost(props: Props): Promise<BlogPostContentBlogPost> {
   };
 }
 
-async function getBlogPostBreadcrumbs(props: Props): Promise<Breadcrumb[]> {
-  const t = await getTranslations('Blog');
-
-  const { blogId } = await props.params;
-
-  const variables = cachedBlogPageDataVariables(blogId);
-
-  const blog = await getBlogPageData(variables);
+async function getBlogPostBreadcrumbs(entityId: number): Promise<Breadcrumb[]> {
+  const blog = await getBlogPageData({ entityId });
   const blogPost = blog?.post;
 
   if (!blog || !blogPost) {
@@ -85,7 +65,7 @@ async function getBlogPostBreadcrumbs(props: Props): Promise<Breadcrumb[]> {
 
   return [
     {
-      label: t('home'),
+      label: 'Home',
       href: '/',
     },
     {
@@ -99,12 +79,13 @@ async function getBlogPostBreadcrumbs(props: Props): Promise<Breadcrumb[]> {
   ];
 }
 
-export default async function Blog(props: Props) {
-  const { locale } = await props.params;
-
-  setRequestLocale(locale);
+export default async function Blog({ params }: Props) {
+  const { blogId } = await params;
 
   return (
-    <BlogPostContent blogPost={getBlogPost(props)} breadcrumbs={getBlogPostBreadcrumbs(props)} />
+    <BlogPostContent
+      blogPost={getBlogPost(Number(blogId))}
+      breadcrumbs={getBlogPostBreadcrumbs(Number(blogId))}
+    />
   );
 }

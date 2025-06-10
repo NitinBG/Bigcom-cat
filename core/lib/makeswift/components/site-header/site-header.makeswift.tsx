@@ -1,11 +1,11 @@
 import {
   Checkbox,
-  Group,
   Image,
   Link,
   List,
   Number,
   Select,
+  Shape,
   Slot,
   TextInput,
 } from '@makeswift/runtime/controls';
@@ -16,10 +16,10 @@ import { MakeswiftHeader } from './site-header.client';
 
 export const COMPONENT_TYPE = 'catalyst-makeswift-header';
 
-const banner = Group({
+const banner = Shape({
   label: 'Banner',
-  preferredLayout: Group.Layout.Popover,
-  props: {
+  layout: Shape.Layout.Popover,
+  type: {
     show: Checkbox({ label: 'Show banner', defaultValue: false }),
     allowClose: Checkbox({ label: 'Allow banner to close', defaultValue: true }),
     id: TextInput({ label: 'Banner ID', defaultValue: 'black_friday_2025' }),
@@ -34,9 +34,9 @@ const logoGroup = (
     height: number;
   },
 ) =>
-  Group({
+  Shape({
     label,
-    props: {
+    type: {
       src: Image({ label: 'Logo' }),
       alt: TextInput({ label: 'Alt text', defaultValue: 'Logo alt' }),
       width: Number({ label: 'Max width', suffix: 'px', defaultValue: defaults.width }),
@@ -44,10 +44,10 @@ const logoGroup = (
     },
   });
 
-const logo = Group({
+const logo = Shape({
   label: 'Logo',
-  preferredLayout: Group.Layout.Popover,
-  props: {
+  layout: Shape.Layout.Popover,
+  type: {
     desktop: logoGroup('Desktop', { width: 200, height: 40 }),
     mobile: logoGroup('Mobile', { width: 100, height: 40 }),
     link: Link({ label: 'Logo link' }),
@@ -56,9 +56,9 @@ const logo = Group({
 
 const links = List({
   label: 'Links',
-  type: Group({
+  type: Shape({
     label: 'Link',
-    props: {
+    type: {
       label: TextInput({ label: 'Text', defaultValue: 'Text' }),
       link: Link({ label: 'URL' }),
     },
@@ -68,9 +68,9 @@ const links = List({
 
 const groups = List({
   label: 'Groups',
-  type: Group({
+  type: Shape({
     label: 'Link group',
-    props: {
+    type: {
       label: TextInput({ label: 'Text', defaultValue: 'Text' }),
       link: Link({ label: 'URL' }),
       links,
@@ -88,9 +88,9 @@ runtime.registerComponent(MakeswiftHeader, {
     logo,
     links: List({
       label: 'Additional links',
-      type: Group({
+      type: Shape({
         label: 'Link',
-        props: {
+        type: {
           label: TextInput({ label: 'Text', defaultValue: 'Text' }),
           link: Link({ label: 'URL' }),
           groups,

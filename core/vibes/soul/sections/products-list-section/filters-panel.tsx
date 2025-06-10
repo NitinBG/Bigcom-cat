@@ -12,7 +12,7 @@ import { Checkbox } from '@/vibes/soul/form/checkbox';
 import { RangeInput } from '@/vibes/soul/form/range-input';
 import { ToggleGroup } from '@/vibes/soul/form/toggle-group';
 import { Streamable, useStreamable } from '@/vibes/soul/lib/streamable';
-import { Accordion, AccordionItem } from '@/vibes/soul/primitives/accordion';
+import { Accordion, Accordions } from '@/vibes/soul/primitives/accordions';
 import { Button } from '@/vibes/soul/primitives/button';
 import { CursorPaginationInfo } from '@/vibes/soul/primitives/cursor-pagination';
 import { Rating } from '@/vibes/soul/primitives/rating';
@@ -67,9 +67,7 @@ interface Props {
 }
 
 function getParamCountLabel(params: Record<string, string | null | string[]>, key: string) {
-  const value = params[key];
-
-  if (Array.isArray(value) && value.length > 0) return `(${value.length})`;
+  if (Array.isArray(params[key]) && params[key].length > 0) return `(${params[key].length})`;
 
   return '';
 }
@@ -131,20 +129,18 @@ export function FiltersPanelInner({
 
   if (filters.length === 0) return null;
 
-  const linkGroupFilters = filters.filter(
-    (filter): filter is LinkGroupFilter => filter.type === 'link-group',
-  );
+  const linkGroupFilters = filters.filter((filter) => filter.type === 'link-group');
 
   return (
     <div className={clsx('space-y-5', className)} data-pending={isPending ? true : null}>
       {linkGroupFilters.map((linkGroup, index) => (
         <div key={index.toString()}>
-          <h3 className="text-contrast-400 py-4 font-mono text-sm uppercase">{linkGroup.label}</h3>
+          <h3 className="py-4 font-mono text-sm uppercase text-contrast-400">{linkGroup.label}</h3>
           <ul>
             {linkGroup.links.map((link, linkIndex) => (
               <li className="py-2" key={linkIndex.toString()}>
                 <Link
-                  className="font-body text-contrast-500 hover:text-foreground text-base font-medium transition-colors duration-300 ease-out"
+                  className="font-body text-base font-medium text-contrast-500 transition-colors duration-300 ease-out hover:text-foreground"
                   href={link.href}
                 >
                   {link.label}
@@ -154,7 +150,7 @@ export function FiltersPanelInner({
           </ul>
         </div>
       ))}
-      <Accordion
+      <Accordions
         onValueChange={(items) =>
           setAccordionItems((prevItems) =>
             prevItems.map((prevItem) => ({
@@ -172,7 +168,7 @@ export function FiltersPanelInner({
           switch (filter.type) {
             case 'toggle-group':
               return (
-                <AccordionItem
+                <Accordion
                   key={key}
                   title={`${filter.label}${getParamCountLabel(optimisticParams, filter.paramName)}`}
                   value={value}
@@ -196,12 +192,12 @@ export function FiltersPanelInner({
                     type="multiple"
                     value={optimisticParams[filter.paramName] ?? []}
                   />
-                </AccordionItem>
+                </Accordion>
               );
 
             case 'range':
               return (
-                <AccordionItem key={key} title={filter.label} value={value}>
+                <Accordion key={key} title={filter.label} value={value}>
                   <RangeInput
                     applyLabel={rangeFilterApplyLabel}
                     disabled={filter.disabled}
@@ -234,12 +230,12 @@ export function FiltersPanelInner({
                       max: optimisticParams[filter.maxParamName] ?? null,
                     }}
                   />
-                </AccordionItem>
+                </Accordion>
               );
 
             case 'rating':
               return (
-                <AccordionItem key={key} title={filter.label} value={value}>
+                <Accordion key={key} title={filter.label} value={value}>
                   <div className="space-y-3">
                     {[5, 4, 3, 2, 1].map((rating) => (
                       <Checkbox
@@ -270,14 +266,14 @@ export function FiltersPanelInner({
                       />
                     ))}
                   </div>
-                </AccordionItem>
+                </Accordion>
               );
 
             default:
               return null;
           }
         })}
-      </Accordion>
+      </Accordions>
 
       <Button
         onClick={() => {
@@ -314,7 +310,7 @@ export function FiltersSkeleton() {
         <RangeSkeleton />
       </AccordionSkeleton>
       {/* Reset Filters Button */}
-      <div className="bg-contrast-100 h-10 w-[10ch] animate-pulse rounded-full" />
+      <div className="h-10 w-[10ch] animate-pulse rounded-full bg-contrast-100" />
     </div>
   );
 }
@@ -324,7 +320,7 @@ function AccordionSkeleton({ children }: { children: React.ReactNode }) {
     <div>
       <div className="items-start py-3 font-mono text-sm uppercase last:flex @md:py-4">
         <div className="inline-flex h-[1lh] items-center">
-          <div className="bg-contrast-100 h-2 w-[10ch] flex-1 animate-pulse rounded-xs" />
+          <div className="h-2 w-[10ch] flex-1 animate-pulse rounded-sm bg-contrast-100" />
         </div>
       </div>
       <div className="pb-5">{children}</div>
@@ -340,7 +336,7 @@ function ToggleGroupSkeleton({ options, seed = 0 }: { options: number; seed?: nu
 
         return (
           <div
-            className="bg-contrast-100 h-12 w-[var(--width)] animate-pulse rounded-full px-4"
+            className="h-12 w-[var(--width)] animate-pulse rounded-full bg-contrast-100 px-4"
             key={i}
             // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
             style={{ '--width': `${width}ch` } as React.CSSProperties}
@@ -354,9 +350,9 @@ function ToggleGroupSkeleton({ options, seed = 0 }: { options: number; seed?: nu
 function RangeSkeleton() {
   return (
     <div className="flex items-center gap-2">
-      <div className="bg-contrast-100 h-12 w-[10ch] animate-pulse rounded-lg" />
-      <div className="bg-contrast-100 h-12 w-[10ch] animate-pulse rounded-lg" />
-      <div className="bg-contrast-100 h-10 w-10 shrink-0 animate-pulse rounded-full" />
+      <div className="h-12 w-[10ch] animate-pulse rounded-lg bg-contrast-100" />
+      <div className="h-12 w-[10ch] animate-pulse rounded-lg bg-contrast-100" />
+      <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-contrast-100" />
     </div>
   );
 }

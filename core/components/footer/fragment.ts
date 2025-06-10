@@ -25,13 +25,8 @@ export const FooterFragment = graphql(`
         }
       }
     }
-  }
-`);
-
-export const FooterSectionsFragment = graphql(`
-  fragment FooterSectionsFragment on Site {
     content {
-      pages(filters: { parentEntityIds: [0] }) {
+      pages(filters: { isVisibleInNavigation: true }) {
         edges {
           node {
             __typename

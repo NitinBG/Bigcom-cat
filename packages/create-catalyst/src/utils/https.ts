@@ -21,7 +21,7 @@ export class Https {
 
     const options = {
       headers: {
-        ...Object.fromEntries(new Headers(headers)),
+        ...headers,
         Accept: 'application/json',
         'User-Agent': this.userAgent,
         ...(this.accessToken && { 'X-Auth-Token': this.accessToken }),

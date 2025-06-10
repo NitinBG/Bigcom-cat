@@ -41,9 +41,6 @@ next-env.d.ts
 # generated
 client/generated
 
-# next-intl
-messages/*.d.json.ts
-
 # secrets
 .catalyst
 

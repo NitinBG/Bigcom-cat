@@ -1,4 +1,4 @@
-import { Color, Group } from '@makeswift/runtime/controls';
+import { Color, Shape } from '@makeswift/runtime/controls';
 
 import { FontFamily } from '~/lib/makeswift/controls/font-tokens';
 import { hsl } from '~/lib/makeswift/utils/color';
@@ -14,10 +14,10 @@ const colorGroup = (
     border: string;
   },
 ) =>
-  Group({
+  Shape({
     label,
-    preferredLayout: Group.Layout.Inline,
-    props: {
+    layout: Shape.Layout.Inline,
+    type: {
       background: Color({ label: 'Background', defaultValue: defaults.background }),
       backgroundHover: Color({ label: 'Background hover', defaultValue: defaults.backgroundHover }),
       foreground: Color({ label: 'Foreground', defaultValue: defaults.foreground }),
@@ -25,10 +25,10 @@ const colorGroup = (
     },
   });
 
-export const button = Group({
+export const button = Shape({
   label: 'Button',
-  preferredLayout: Group.Layout.Popover,
-  props: {
+  layout: Shape.Layout.Popover,
+  type: {
     fontFamily: FontFamily({ label: 'Font', defaultValue: FontFamily.Body }),
     primary: colorGroup('Primary', {
       background: hsl(colors.primary),

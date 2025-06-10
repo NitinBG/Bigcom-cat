@@ -7,10 +7,10 @@ import * as Popover from '@radix-ui/react-popover';
 import { clsx } from 'clsx';
 import debounce from 'lodash.debounce';
 import { ArrowRight, ChevronDown, Search, SearchIcon, ShoppingBag, User } from 'lucide-react';
-import { useParams } from 'next/navigation';
 import React, {
   forwardRef,
   Ref,
+  startTransition,
   useActionState,
   useCallback,
   useEffect,
@@ -27,8 +27,7 @@ import { Logo } from '@/vibes/soul/primitives/logo';
 import { Price } from '@/vibes/soul/primitives/price-label';
 import { ProductCard } from '@/vibes/soul/primitives/product-card';
 import { Link } from '~/components/link';
-import { useSearch } from '~/context/search-context';
-import { usePathname, useRouter } from '~/i18n/routing';
+import { usePathname } from '~/i18n/routing';
 
 interface Link {
   label: string;
@@ -76,6 +75,7 @@ export type SearchResult =
       links: Array<{ label: string; href: string }>;
     };
 
+type LocaleAction = Action<SubmissionResult | null, FormData>;
 type CurrencyAction = Action<SubmissionResult | null, FormData>;
 type SearchAction<S extends SearchResult> = Action<
   {
@@ -97,8 +97,9 @@ interface Props<S extends SearchResult> {
   linksPosition?: 'center' | 'left' | 'right';
   locales?: Locale[];
   activeLocaleId?: string;
+  localeAction?: LocaleAction;
   currencies?: Currency[];
-  activeCurrencyId?: Streamable<string | undefined>;
+  activeCurrencyId?: string;
   currencyAction?: CurrencyAction;
   logo?: Streamable<string | { src: string; alt: string } | null>;
   logoWidth?: number;
@@ -128,7 +129,7 @@ const MobileMenuButton = forwardRef<
     <button
       {...rest}
       className={clsx(
-        'group relative rounded-lg p-2 ring-[var(--nav-focus,hsl(var(--primary)))] outline-0 transition-colors focus-visible:ring-2',
+        'group relative rounded-lg p-2 outline-0 ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors focus-visible:ring-2',
         className,
       )}
       ref={ref}
@@ -142,7 +143,7 @@ const MobileMenuButton = forwardRef<
         />
         <div
           className={clsx(
-            'h-px transform rounded-sm bg-[var(--nav-mobile-button-icon,hsl(var(--foreground)))] transition-all delay-75 duration-300',
+            'h-px transform rounded bg-[var(--nav-mobile-button-icon,hsl(var(--foreground)))] transition-all delay-75 duration-300',
             open ? 'translate-x-10' : 'w-7',
           )}
         />
@@ -270,9 +271,10 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
     mobileLogoHeight = 40,
     linksPosition = 'center',
     activeLocaleId,
+    localeAction,
     locales,
-    currencies: streamableCurrencies,
-    activeCurrencyId: streamableActiveCurrencyId,
+    currencies,
+    activeCurrencyId,
     currencyAction,
     searchHref,
     searchParamName = 'query',
@@ -288,14 +290,14 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
   ref: Ref<HTMLDivElement>,
 ) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isSearchOpen, setIsSearchOpen } = useSearch();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const pathname = usePathname();
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsSearchOpen(false);
-  }, [pathname, setIsSearchOpen]);
+  }, [pathname]);
 
   useEffect(() => {
     function handleScroll() {
@@ -306,18 +308,18 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
     window.addEventListener('scroll', handleScroll);
 
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [setIsSearchOpen]);
+  }, []);
 
   return (
     <NavigationMenu.Root
-      className={clsx('@container relative mx-auto w-full max-w-(--breakpoint-2xl)', className)}
+      className={clsx('relative mx-auto w-full max-w-screen-2xl @container', className)}
       delayDuration={0}
       onValueChange={() => setIsSearchOpen(false)}
       ref={ref}
     >
       <div
         className={clsx(
-          'flex items-center justify-between gap-1 bg-[var(--nav-background,hsl(var(--background)))] py-2 pr-2 pl-3 transition-shadow @4xl:rounded-2xl @4xl:px-2 @4xl:pr-2.5 @4xl:pl-6',
+          'flex items-center justify-between gap-1 bg-[var(--nav-background,hsl(var(--background)))] py-2 pl-3 pr-2 transition-shadow @4xl:rounded-2xl @4xl:px-2 @4xl:pl-6 @4xl:pr-2.5',
           isFloating
             ? 'shadow-xl ring-1 ring-[var(--nav-floating-border,hsl(var(--foreground)/10%))]'
             : 'shadow-none ring-0',
@@ -325,7 +327,7 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
       >
         {/* Mobile Menu */}
         <Popover.Root onOpenChange={setIsMobileMenuOpen} open={isMobileMenuOpen}>
-          <Popover.Anchor className="absolute top-full right-0 left-0" />
+          <Popover.Anchor className="absolute left-0 right-0 top-full" />
           <Popover.Trigger asChild>
             <MobileMenuButton
               aria-label={mobileMenuTriggerLabel}
@@ -335,22 +337,22 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
             />
           </Popover.Trigger>
           <Popover.Portal>
-            <Popover.Content className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 @container max-h-[calc(var(--radix-popover-content-available-height)-8px)] w-[var(--radix-popper-anchor-width)]">
+            <Popover.Content className="max-h-[calc(var(--radix-popover-content-available-height)-8px)] w-[var(--radix-popper-anchor-width)] @container data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
               <div className="max-h-[inherit] divide-y divide-[var(--nav-mobile-divider,hsl(var(--contrast-100)))] overflow-y-auto bg-[var(--nav-mobile-background,hsl(var(--background)))]">
                 <Stream
                   fallback={
                     <ul className="flex animate-pulse flex-col gap-4 p-5 @4xl:gap-2 @4xl:p-5">
                       <li>
-                        <span className="bg-contrast-100 block h-4 w-10 rounded-md" />
+                        <span className="block h-4 w-10 rounded-md bg-contrast-100" />
                       </li>
                       <li>
-                        <span className="bg-contrast-100 block h-4 w-14 rounded-md" />
+                        <span className="block h-4 w-14 rounded-md bg-contrast-100" />
                       </li>
                       <li>
-                        <span className="bg-contrast-100 block h-4 w-24 rounded-md" />
+                        <span className="block h-4 w-24 rounded-md bg-contrast-100" />
                       </li>
                       <li>
-                        <span className="bg-contrast-100 block h-4 w-16 rounded-md" />
+                        <span className="block h-4 w-16 rounded-md bg-contrast-100" />
                       </li>
                     </ul>
                   }
@@ -362,7 +364,7 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
                         {item.label !== '' && (
                           <li>
                             <Link
-                              className="block rounded-lg bg-[var(--nav-mobile-link-background,transparent)] px-3 py-2 font-[family-name:var(--nav-mobile-link-font-family,var(--font-family-body))] font-semibold text-[var(--nav-mobile-link-text,hsl(var(--foreground)))] ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors hover:bg-[var(--nav-mobile-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-mobile-link-text-hover,hsl(var(--foreground)))] focus-visible:ring-2 focus-visible:outline-0 @4xl:py-4"
+                              className="block rounded-lg bg-[var(--nav-mobile-link-background,transparent)] px-3 py-2 font-[family-name:var(--nav-mobile-link-font-family,var(--font-family-body))] font-semibold text-[var(--nav-mobile-link-text,hsl(var(--foreground)))] ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors hover:bg-[var(--nav-mobile-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-mobile-link-text-hover,hsl(var(--foreground)))] focus-visible:outline-0 focus-visible:ring-2 @4xl:py-4"
                               href={item.href}
                             >
                               {item.label}
@@ -374,7 +376,7 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
                           .map((link, j) => (
                             <li key={j}>
                               <Link
-                                className="block rounded-lg bg-[var(--nav-mobile-sub-link-background,transparent)] px-3 py-2 font-[family-name:var(--nav-mobile-sub-link-font-family,var(--font-family-body))] text-sm font-medium text-[var(--nav-mobile-sub-link-text,hsl(var(--contrast-500)))] ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors hover:bg-[var(--nav-mobile-sub-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-mobile-sub-link-text-hover,hsl(var(--foreground)))] focus-visible:ring-2 focus-visible:outline-0 @4xl:py-4"
+                                className="block rounded-lg bg-[var(--nav-mobile-sub-link-background,transparent)] px-3 py-2 font-[family-name:var(--nav-mobile-sub-link-font-family,var(--font-family-body))] text-sm font-medium text-[var(--nav-mobile-sub-link-text,hsl(var(--contrast-500)))] ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors hover:bg-[var(--nav-mobile-sub-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-mobile-sub-link-text-hover,hsl(var(--foreground)))] focus-visible:outline-0 focus-visible:ring-2 @4xl:py-4"
                                 href={link.href}
                               >
                                 {link.label}
@@ -430,18 +432,18 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
         >
           <Stream
             fallback={
-              <ul className="flex animate-pulse flex-row @4xl:gap-6 @4xl:p-2.5">
+              <ul className="flex animate-pulse flex-row p-2 @4xl:gap-2 @4xl:p-5">
                 <li>
-                  <span className="bg-contrast-100 block h-4 w-10 rounded-md" />
+                  <span className="block h-4 w-10 rounded-md bg-contrast-100" />
                 </li>
                 <li>
-                  <span className="bg-contrast-100 block h-4 w-14 rounded-md" />
+                  <span className="block h-4 w-14 rounded-md bg-contrast-100" />
                 </li>
                 <li>
-                  <span className="bg-contrast-100 block h-4 w-24 rounded-md" />
+                  <span className="block h-4 w-24 rounded-md bg-contrast-100" />
                 </li>
                 <li>
-                  <span className="bg-contrast-100 block h-4 w-16 rounded-md" />
+                  <span className="block h-4 w-16 rounded-md bg-contrast-100" />
                 </li>
               </ul>
             }
@@ -452,7 +454,7 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
                 <NavigationMenu.Item key={i} value={i.toString()}>
                   <NavigationMenu.Trigger asChild>
                     <Link
-                      className="hidden items-center rounded-xl bg-[var(--nav-link-background,transparent)] p-2.5 font-[family-name:var(--nav-link-font-family,var(--font-family-body))] text-sm font-medium whitespace-nowrap text-[var(--nav-link-text,hsl(var(--foreground)))] ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors duration-200 hover:bg-[var(--nav-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-link-text-hover,hsl(var(--foreground)))] focus-visible:ring-2 focus-visible:outline-0 @4xl:inline-flex"
+                      className="hidden items-center whitespace-nowrap rounded-xl bg-[var(--nav-link-background,transparent)] p-2.5 font-[family-name:var(--nav-link-font-family,var(--font-family-body))] text-sm font-medium text-[var(--nav-link-text,hsl(var(--foreground)))] ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors duration-200 hover:bg-[var(--nav-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-link-text-hover,hsl(var(--foreground)))] focus-visible:outline-0 focus-visible:ring-2 @4xl:inline-flex"
                       href={item.href}
                     >
                       {item.label}
@@ -460,7 +462,7 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
                   </NavigationMenu.Trigger>
                   {item.groups != null && item.groups.length > 0 && (
                     <NavigationMenu.Content className="rounded-2xl bg-[var(--nav-menu-background,hsl(var(--background)))] shadow-xl ring-1 ring-[var(--nav-menu-border,hsl(var(--foreground)/5%))]">
-                      <div className="m-auto grid w-full max-w-(--breakpoint-lg) grid-cols-5 justify-center gap-5 px-5 pt-5 pb-8">
+                      <div className="m-auto grid w-full max-w-screen-lg grid-cols-5 justify-center gap-5 px-5 pb-8 pt-5">
                         {item.groups.map((group, columnIndex) => (
                           <ul className="flex flex-col" key={columnIndex}>
                             {/* Second Level Links */}
@@ -480,7 +482,7 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
                               // Third Level Links
                               <li key={idx}>
                                 <Link
-                                  className="block rounded-lg bg-[var(--nav-sub-link-background,transparent)] px-3 py-1.5 font-[family-name:var(--nav-sub-link-font-family,var(--font-family-body))] text-sm font-medium text-[var(--nav-sub-link-text,hsl(var(--contrast-500)))] ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors hover:bg-[var(--nav-sub-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-sub-link-text-hover,hsl(var(--foreground)))] focus-visible:ring-2 focus-visible:outline-0"
+                                  className="block rounded-lg bg-[var(--nav-sub-link-background,transparent)] px-3 py-1.5 font-[family-name:var(--nav-sub-link-font-family,var(--font-family-body))] text-sm font-medium text-[var(--nav-sub-link-text,hsl(var(--contrast-500)))] ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors hover:bg-[var(--nav-sub-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-sub-link-text-hover,hsl(var(--foreground)))] focus-visible:outline-0 focus-visible:ring-2"
                                   href={link.href}
                                 >
                                   {link.label}
@@ -507,7 +509,7 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
         >
           {searchAction ? (
             <Popover.Root onOpenChange={setIsSearchOpen} open={isSearchOpen}>
-              <Popover.Anchor className="absolute top-full right-0 left-0" />
+              <Popover.Anchor className="absolute left-0 right-0 top-full" />
               <Popover.Trigger asChild>
                 <button
                   aria-label={openSearchPopupLabel}
@@ -520,7 +522,7 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
                 </button>
               </Popover.Trigger>
               <Popover.Portal>
-                <Popover.Content className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 @container max-h-[calc(var(--radix-popover-content-available-height)-16px)] w-[var(--radix-popper-anchor-width)] py-2">
+                <Popover.Content className="max-h-[calc(var(--radix-popover-content-available-height)-16px)] w-[var(--radix-popper-anchor-width)] py-2 @container data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
                   <div className="flex max-h-[inherit] flex-col rounded-2xl bg-[var(--nav-search-background,hsl(var(--background)))] shadow-xl ring-1 ring-[var(--nav-search-border,hsl(var(--foreground)/5%))] transition-all duration-200 ease-in-out @4xl:inset-x-0">
                     <SearchForm
                       searchAction={searchAction}
@@ -546,14 +548,14 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
             <ShoppingBag size={20} strokeWidth={1} />
             <Stream
               fallback={
-                <span className="bg-contrast-100 text-background absolute -top-0.5 -right-0.5 flex h-4 w-4 animate-pulse items-center justify-center rounded-full text-xs" />
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 animate-pulse items-center justify-center rounded-full bg-contrast-100 text-xs text-background" />
               }
               value={streamableCartCount}
             >
               {(cartCount) =>
                 cartCount != null &&
                 cartCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--nav-cart-count-background,hsl(var(--foreground)))] font-[family-name:var(--nav-cart-count-font-family,var(--font-family-body))] text-xs text-[var(--nav-cart-count-text,hsl(var(--background)))]">
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--nav-cart-count-background,hsl(var(--foreground)))] font-[family-name:var(--nav-cart-count-font-family,var(--font-family-body))] text-xs text-[var(--nav-cart-count-text,hsl(var(--background)))]">
                     {cartCount}
                   </span>
                 )
@@ -562,8 +564,9 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
           </Link>
 
           {/* Locale / Language Dropdown */}
-          {locales && locales.length > 1 ? (
-            <LocaleSwitcher
+          {locales && locales.length > 1 && localeAction ? (
+            <LocaleForm
+              action={localeAction}
               activeLocaleId={activeLocaleId}
               // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
               locales={locales as [Locale, Locale, ...Locale[]]}
@@ -571,26 +574,18 @@ export const Navigation = forwardRef(function Navigation<S extends SearchResult>
           ) : null}
 
           {/* Currency Dropdown */}
-          <Stream
-            fallback={null}
-            value={Streamable.all([streamableCurrencies, streamableActiveCurrencyId])}
-          >
-            {([currencies, activeCurrencyId]) =>
-              currencies && currencies.length > 1 && currencyAction ? (
-                <CurrencyForm
-                  action={currencyAction}
-                  activeCurrencyId={activeCurrencyId}
-                  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-                  currencies={currencies as [Currency, ...Currency[]]}
-                />
-              ) : null
-            }
-          </Stream>
+          {currencies && currencies.length > 1 && currencyAction ? (
+            <CurrencyForm
+              action={currencyAction}
+              activeCurrencyId={activeCurrencyId}
+              currencies={currencies as [Currency, ...Currency[]]}
+            />
+          ) : null}
         </div>
       </div>
 
-      <div className="absolute top-full right-0 left-0 z-50 flex w-full justify-center perspective-[2000px]">
-        <NavigationMenu.Viewport className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 relative mt-2 w-full" />
+      <div className="perspective-[2000px] absolute left-0 right-0 top-full z-50 flex w-full justify-center">
+        <NavigationMenu.Viewport className="relative mt-2 w-full data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95" />
       </div>
     </NavigationMenu.Root>
   );
@@ -662,7 +657,7 @@ function SearchForm<S extends SearchResult>({
           strokeWidth={1}
         />
         <input
-          className="grow bg-transparent pl-2 text-lg font-medium outline-0 focus-visible:outline-hidden @xl:pl-0"
+          className="flex-grow bg-transparent pl-2 text-lg font-medium outline-0 focus-visible:outline-none @xl:pl-0"
           name={searchParamName}
           onChange={(e) => {
             setQuery(e.currentTarget.value);
@@ -766,17 +761,17 @@ function SearchResults({
             return (
               <section
                 aria-label={result.title}
-                className="flex w-full flex-col gap-1 border-b border-[var(--nav-search-divider,hsl(var(--contrast-100)))] p-5 @2xl:max-w-80 @2xl:border-r @2xl:border-b-0"
+                className="flex w-full flex-col gap-1 border-b border-[var(--nav-search-divider,hsl(var(--contrast-100)))] p-5 @2xl:max-w-80 @2xl:border-b-0 @2xl:border-r"
                 key={`result-${index}`}
               >
-                <h3 className="mb-4 font-[family-name:var(--nav-search-result-title-font-family,var(--font-family-mono))] text-sm text-[var(--nav-search-result-title,hsl(var(--foreground)))] uppercase">
+                <h3 className="mb-4 font-[family-name:var(--nav-search-result-title-font-family,var(--font-family-mono))] text-sm uppercase text-[var(--nav-search-result-title,hsl(var(--foreground)))]">
                   {result.title}
                 </h3>
                 <ul role="listbox">
                   {result.links.map((link, i) => (
                     <li key={i}>
                       <Link
-                        className="block rounded-lg bg-[var(--nav-search-result-link-background,transparent)] px-3 py-4 font-[family-name:var(--nav-search-result-link-font-family,var(--font-family-body))] font-semibold text-[var(--nav-search-result-link-text,hsl(var(--contrast-500)))] ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors hover:bg-[var(--nav-search-result-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-search-result-link-text-hover,hsl(var(--foreground)))] focus-visible:ring-2 focus-visible:outline-0"
+                        className="block rounded-lg bg-[var(--nav-search-result-link-background,transparent)] px-3 py-4 font-[family-name:var(--nav-search-result-link-font-family,var(--font-family-body))] font-semibold text-[var(--nav-search-result-link-text,hsl(var(--contrast-500)))] ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors hover:bg-[var(--nav-search-result-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-search-result-link-text-hover,hsl(var(--foreground)))] focus-visible:outline-0 focus-visible:ring-2"
                         href={link.href}
                       >
                         {link.label}
@@ -795,7 +790,7 @@ function SearchResults({
                 className="flex w-full flex-col gap-5 p-5"
                 key={`result-${index}`}
               >
-                <h3 className="font-[family-name:var(--nav-search-result-title-font-family,var(--font-family-mono))] text-sm text-[var(--nav-search-result-title,hsl(var(--foreground)))] uppercase">
+                <h3 className="font-[family-name:var(--nav-search-result-title-font-family,var(--font-family-mono))] text-sm uppercase text-[var(--nav-search-result-title,hsl(var(--foreground)))]">
                   {result.title}
                 </h3>
                 <ul
@@ -829,43 +824,26 @@ function SearchResults({
   );
 }
 
-const useSwitchLocale = () => {
-  const pathname = usePathname();
-  const router = useRouter();
-  const params = useParams();
-
-  return useCallback(
-    (locale: string) =>
-      router.push(
-        // @ts-expect-error -- TypeScript will validate that only known `params`
-        // are used in combination with a given `pathname`. Since the two will
-        // always match for the current route, we can skip runtime checks.
-        { pathname, params },
-        { locale },
-      ),
-    [pathname, params, router],
-  );
-};
-
-function LocaleSwitcher({
+function LocaleForm({
+  action,
   locales,
   activeLocaleId,
 }: {
   activeLocaleId?: string;
+  action: LocaleAction;
   locales: [Locale, ...Locale[]];
 }) {
+  const [lastResult, formAction] = useActionState(action, null);
   const activeLocale = locales.find((locale) => locale.id === activeLocaleId);
-  const [isPending, startTransition] = useTransition();
-  const switchLocale = useSwitchLocale();
+
+  useEffect(() => {
+    if (lastResult?.error) console.log(lastResult.error);
+  }, [lastResult?.error]);
 
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
-        className={clsx(
-          'flex items-center gap-1 text-xs uppercase transition-opacity disabled:opacity-30',
-          navButtonClassName,
-        )}
-        disabled={isPending}
+        className={clsx('flex items-center gap-1 text-xs uppercase', navButtonClassName)}
       >
         {activeLocale?.id ?? locales[0].id}
         <ChevronDown size={16} strokeWidth={1.5} />
@@ -873,20 +851,28 @@ function LocaleSwitcher({
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           align="end"
-          className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 z-50 max-h-80 overflow-y-scroll rounded-xl bg-[var(--nav-locale-background,hsl(var(--background)))] p-2 shadow-xl @4xl:w-32 @4xl:rounded-2xl @4xl:p-2"
+          className="z-50 max-h-80 overflow-y-scroll rounded-xl bg-[var(--nav-locale-background,hsl(var(--background)))] p-2 shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 @4xl:w-32 @4xl:rounded-2xl @4xl:p-2"
           sideOffset={16}
         >
           {locales.map(({ id, label }) => (
             <DropdownMenu.Item
               className={clsx(
-                'cursor-default rounded-lg bg-[var(--nav-locale-link-background,transparent)] px-2.5 py-2 font-[family-name:var(--nav-locale-link-font-family,var(--font-family-body))] text-sm font-medium text-[var(--nav-locale-link-text,hsl(var(--contrast-400)))] ring-[var(--nav-focus,hsl(var(--primary)))] outline-hidden transition-colors hover:bg-[var(--nav-locale-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-locale-link-text-hover,hsl(var(--foreground)))]',
+                'cursor-default rounded-lg bg-[var(--nav-locale-link-background,transparent)] px-2.5 py-2 font-[family-name:var(--nav-locale-link-font-family,var(--font-family-body))] text-sm font-medium text-[var(--nav-locale-link-text,hsl(var(--contrast-400)))] outline-none ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors hover:bg-[var(--nav-locale-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-locale-link-text-hover,hsl(var(--foreground)))]',
                 {
                   'text-[var(--nav-locale-link-text-selected,hsl(var(--foreground)))]':
                     id === activeLocaleId,
                 },
               )}
               key={id}
-              onSelect={() => startTransition(() => switchLocale(id))}
+              onSelect={() => {
+                // eslint-disable-next-line @typescript-eslint/require-await
+                startTransition(async () => {
+                  const formData = new FormData();
+
+                  formData.append('id', id);
+                  formAction(formData);
+                });
+              }}
             >
               {label}
             </DropdownMenu.Item>
@@ -906,24 +892,17 @@ function CurrencyForm({
   action: CurrencyAction;
   currencies: [Currency, ...Currency[]];
 }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [lastResult, formAction] = useActionState(action, null);
   const activeCurrency = currencies.find((currency) => currency.id === activeCurrencyId);
 
   useEffect(() => {
-    // eslint-disable-next-line no-console
     if (lastResult?.error) console.log(lastResult.error);
   }, [lastResult?.error]);
 
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
-        className={clsx(
-          'flex items-center gap-1 text-xs uppercase transition-opacity disabled:opacity-30',
-          navButtonClassName,
-        )}
-        disabled={isPending}
+        className={clsx('flex items-center gap-1 text-xs uppercase', navButtonClassName)}
       >
         {activeCurrency?.label ?? currencies[0].label}
         <ChevronDown size={16} strokeWidth={1.5} />
@@ -931,13 +910,13 @@ function CurrencyForm({
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           align="end"
-          className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 z-50 max-h-80 overflow-y-scroll rounded-xl bg-[var(--nav-locale-background,hsl(var(--background)))] p-2 shadow-xl @4xl:w-32 @4xl:rounded-2xl @4xl:p-2"
+          className="z-50 max-h-80 overflow-y-scroll rounded-xl bg-[var(--nav-locale-background,hsl(var(--background)))] p-2 shadow-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 @4xl:w-32 @4xl:rounded-2xl @4xl:p-2"
           sideOffset={16}
         >
           {currencies.map((currency) => (
             <DropdownMenu.Item
               className={clsx(
-                'cursor-default rounded-lg bg-[var(--nav-locale-link-background,transparent)] px-2.5 py-2 font-[family-name:var(--nav-locale-link-font-family,var(--font-family-body))] text-sm font-medium text-[var(--nav-locale-link-text,hsl(var(--contrast-400)))] ring-[var(--nav-focus,hsl(var(--primary)))] outline-hidden transition-colors hover:bg-[var(--nav-locale-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-locale-link-text-hover,hsl(var(--foreground)))]',
+                'cursor-default rounded-lg bg-[var(--nav-locale-link-background,transparent)] px-2.5 py-2 font-[family-name:var(--nav-locale-link-font-family,var(--font-family-body))] text-sm font-medium text-[var(--nav-locale-link-text,hsl(var(--contrast-400)))] outline-none ring-[var(--nav-focus,hsl(var(--primary)))] transition-colors hover:bg-[var(--nav-locale-link-background-hover,hsl(var(--contrast-100)))] hover:text-[var(--nav-locale-link-text-hover,hsl(var(--foreground)))]',
                 {
                   'text-[var(--nav-locale-link-text-selected,hsl(var(--foreground)))]':
                     currency.id === activeCurrencyId,
@@ -948,13 +927,8 @@ function CurrencyForm({
                 // eslint-disable-next-line @typescript-eslint/require-await
                 startTransition(async () => {
                   const formData = new FormData();
-
                   formData.append('id', currency.id);
                   formAction(formData);
-
-                  // This is needed to refresh the Data Cache after the product has been added to the cart.
-                  // The cart id is not picked up after the first time the cart is created/updated.
-                  router.refresh();
                 });
               }}
             >

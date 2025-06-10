@@ -1,22 +1,8 @@
 import { graphql } from '~/client/graphql';
 
-export const BreadcrumbsCategoryFragment = graphql(`
+export const BreadcrumbsFragment = graphql(`
   fragment BreadcrumbsFragment on Category {
     breadcrumbs(depth: 5) {
-      edges {
-        node {
-          name
-          path
-          entityId
-        }
-      }
-    }
-  }
-`);
-
-export const BreadcrumbsWebPageFragment = graphql(`
-  fragment BreadcrumbsFragment on WebPage {
-    breadcrumbs(depth: 8) {
       edges {
         node {
           name

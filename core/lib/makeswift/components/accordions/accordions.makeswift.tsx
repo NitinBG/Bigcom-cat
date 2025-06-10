@@ -1,6 +1,6 @@
-import { Group, List, Select, Slot, Style, TextInput } from '@makeswift/runtime/controls';
+import { List, Select, Shape, Slot, Style, TextInput } from '@makeswift/runtime/controls';
 
-import { Accordion, AccordionItem } from '@/vibes/soul/primitives/accordion';
+import { Accordion, Accordions } from '@/vibes/soul/primitives/accordions';
 import { runtime } from '~/lib/makeswift/runtime';
 
 interface MSAccordion {
@@ -18,7 +18,7 @@ interface MSAccordionsProps {
 runtime.registerComponent(
   function MSAccordions({ className, accordions, colorScheme, type }: MSAccordionsProps) {
     return (
-      <Accordion
+      <Accordions
         className={className}
         collapsible={type === 'single' ? true : undefined}
         type={type}
@@ -27,16 +27,11 @@ runtime.registerComponent(
           <div className="p-4 text-center text-lg text-gray-400">Add accordions</div>
         )}
         {accordions.map(({ title, children }, index) => (
-          <AccordionItem
-            colorScheme={colorScheme}
-            key={index}
-            title={title}
-            value={index.toString()}
-          >
+          <Accordion colorScheme={colorScheme} key={index} title={title} value={index.toString()}>
             {children}
-          </AccordionItem>
+          </Accordion>
         ))}
-      </Accordion>
+      </Accordions>
     );
   },
   {
@@ -47,9 +42,8 @@ runtime.registerComponent(
       className: Style(),
       accordions: List({
         label: 'Accordions',
-        type: Group({
-          label: 'Accordion item',
-          props: {
+        type: Shape({
+          type: {
             title: TextInput({ label: 'Title', defaultValue: 'This is an accordion title' }),
             children: Slot(),
           },

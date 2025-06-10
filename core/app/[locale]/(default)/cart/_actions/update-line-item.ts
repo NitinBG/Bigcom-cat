@@ -6,8 +6,8 @@ import { parseWithZod } from '@conform-to/zod';
 import { FragmentOf } from 'gql.tada';
 import { getTranslations } from 'next-intl/server';
 
-import { CartLineItem } from '@/vibes/soul/sections/cart';
 import { cartLineItemActionFormDataSchema } from '@/vibes/soul/sections/cart/schema';
+import { CartLineItem } from '@/vibes/soul/sections/cart/types';
 
 import { DigitalItemFragment, PhysicalItemFragment } from '../page-data';
 
@@ -39,7 +39,7 @@ export const updateLineItem = async (
   if (submission.status !== 'success') {
     return {
       ...prevState,
-      lastResult: submission.reply(),
+      lastResult: submission.reply({ formErrors: [t('somethingWentWrong')] }),
     };
   }
 
@@ -385,6 +385,13 @@ export const updateLineItem = async (
       }
 
       const deletedItem = submission.value;
+
+      // TODO: add bodl
+      // bodl.cart.productRemoved({
+      //   currency,
+      //   product_value: product.listPrice.value * product.quantity,
+      //   line_items: [lineItemTransform(product)],
+      // });
 
       return {
         lineItems: prevState.lineItems.filter((item) => item.id !== deletedItem.id),

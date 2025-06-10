@@ -1,4 +1,4 @@
-import { Checkbox, Group, List, Select, Slot, Style, TextInput } from '@makeswift/runtime/controls';
+import { Checkbox, List, Select, Shape, Slot, Style, TextInput } from '@makeswift/runtime/controls';
 
 import {
   Carousel,
@@ -64,9 +64,8 @@ runtime.registerComponent(
       className: Style(),
       slides: List({
         label: 'Items',
-        type: Group({
-          label: 'Item',
-          props: {
+        type: Shape({
+          type: {
             name: TextInput({ label: 'Name', defaultValue: '' }),
             children: Slot(),
           },

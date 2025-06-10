@@ -1,14 +1,14 @@
-import { Color, Group } from '@makeswift/runtime/controls';
+import { Color, Shape } from '@makeswift/runtime/controls';
 
 import { FontFamily } from '~/lib/makeswift/controls/font-tokens';
 import { hsl } from '~/lib/makeswift/utils/color';
 
 import { colors } from '../base-colors';
 
-export const slideshow = Group({
+export const slideshow = Shape({
   label: 'Slideshow',
-  preferredLayout: Group.Layout.Popover,
-  props: {
+  layout: Shape.Layout.Popover,
+  type: {
     titleFontFamily: FontFamily({ label: 'Title font', defaultValue: FontFamily.Heading }),
     descriptionFontFamily: FontFamily({ label: 'Description font', defaultValue: FontFamily.Body }),
     numberFontFamily: FontFamily({ label: 'Number font', defaultValue: FontFamily.Accent }),

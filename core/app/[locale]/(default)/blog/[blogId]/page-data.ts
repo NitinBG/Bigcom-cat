@@ -1,7 +1,7 @@
 import { cache } from 'react';
 
 import { client } from '~/client';
-import { graphql, VariablesOf } from '~/client/graphql';
+import { graphql } from '~/client/graphql';
 import { revalidate } from '~/client/revalidate-target';
 
 const BlogPageQuery = graphql(`
@@ -35,12 +35,10 @@ const BlogPageQuery = graphql(`
   }
 `);
 
-type Variables = VariablesOf<typeof BlogPageQuery>;
-
-export const getBlogPageData = cache(async (variables: Variables) => {
+export const getBlogPageData = cache(async ({ entityId }: { entityId: number }) => {
   const response = await client.fetch({
     document: BlogPageQuery,
-    variables,
+    variables: { entityId },
     fetchOptions: { next: { revalidate } },
   });
 

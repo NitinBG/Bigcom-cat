@@ -2,13 +2,12 @@ import { clsx } from 'clsx';
 
 import { Badge } from '@/vibes/soul/primitives/badge';
 import { Price, PriceLabel } from '@/vibes/soul/primitives/price-label';
-import * as Skeleton from '@/vibes/soul/primitives/skeleton';
 import { Image } from '~/components/image';
 import { Link } from '~/components/link';
 
 import { Compare } from './compare';
 
-export interface Product {
+export interface CardProduct {
   id: string;
   title: string;
   href: string;
@@ -19,7 +18,7 @@ export interface Product {
   rating?: number;
 }
 
-export interface ProductCardProps {
+interface Props {
   className?: string;
   colorScheme?: 'light' | 'dark';
   aspectRatio?: '5:6' | '3:4' | '1:1';
@@ -28,7 +27,7 @@ export interface ProductCardProps {
   imageSizes?: string;
   compareLabel?: string;
   compareParamName?: string;
-  product: Product;
+  product: CardProduct;
 }
 
 // eslint-disable-next-line valid-jsdoc
@@ -39,15 +38,13 @@ export interface ProductCardProps {
  * ```css
  * :root {
  *   --product-card-focus: hsl(var(--primary));
- *   --product-card-light-offset: hsl(var(--background));
+ *   --product-card-border-radius: 1rem;
  *   --product-card-light-background: hsl(var(--contrast-100));
  *   --product-card-light-title: hsl(var(--foreground));
  *   --product-card-light-subtitle: hsl(var(--foreground) / 75%);
- *   --product-card-dark-offset: hsl(var(--foreground));
  *   --product-card-dark-background: hsl(var(--contrast-500));
  *   --product-card-dark-title: hsl(var(--background));
  *   --product-card-dark-subtitle: hsl(var(--background) / 75%);
- *   --product-card-font-family: var(--font-family-body);
  * }
  * ```
  */
@@ -61,21 +58,21 @@ export function ProductCard({
   compareParamName,
   imagePriority = false,
   imageSizes = '(min-width: 80rem) 20vw, (min-width: 64rem) 25vw, (min-width: 42rem) 33vw, (min-width: 24rem) 50vw, 100vw',
-}: ProductCardProps) {
+}: Props) {
   return (
-    <article
-      className={clsx(
-        'group @container flex max-w-md min-w-0 flex-col gap-2 font-[family-name:var(--card-font-family,var(--font-family-body))]',
-        className,
-      )}
-    >
-      <div className="relative">
+    <div className={clsx('@container', className)}>
+      <Link
+        aria-label={title}
+        className="group flex cursor-pointer flex-col gap-2 rounded-[var(--product-card-border-radius,1rem)] ring-[var(--product-card-focus,hsl(var(--primary)))] ring-offset-4 focus-visible:outline-0 focus-visible:ring-2"
+        href={href}
+        id={id}
+      >
         <div
           className={clsx(
-            'relative overflow-hidden rounded-xl @md:rounded-2xl',
+            'relative overflow-hidden rounded-[inherit]',
             {
-              '5:6': 'aspect-5/6',
-              '3:4': 'aspect-3/4',
+              '5:6': 'aspect-[5/6]',
+              '3:4': 'aspect-[3/4]',
               '1:1': 'aspect-square',
             }[aspectRatio],
             {
@@ -88,7 +85,7 @@ export function ProductCard({
             <Image
               alt={image.alt}
               className={clsx(
-                'w-full scale-100 object-cover transition-transform duration-500 ease-out select-none group-hover:scale-110',
+                'w-full scale-100 select-none object-cover transition-transform duration-500 ease-out group-hover:scale-110',
                 {
                   light: 'bg-[var(--product-card-light-background,hsl(var(--contrast-100))]',
                   dark: 'bg-[var(--product-card-dark-background,hsl(var(--contrast-500))]',
@@ -102,7 +99,7 @@ export function ProductCard({
           ) : (
             <div
               className={clsx(
-                'pt-5 pl-5 text-4xl leading-[0.8] font-bold tracking-tighter break-words opacity-25 transition-transform duration-500 ease-out group-hover:scale-105 @xs:text-7xl',
+                'break-words pl-5 pt-5 text-4xl font-bold leading-[0.8] tracking-tighter opacity-25 transition-transform duration-500 ease-out group-hover:scale-105 @xs:text-7xl',
                 {
                   light: 'text-[var(--product-card-light-title,hsl(var(--foreground)))]',
                   dark: 'text-[var(--product-card-dark-title,hsl(var(--background)))]',
@@ -113,14 +110,16 @@ export function ProductCard({
             </div>
           )}
           {badge != null && badge !== '' && (
-            <Badge className="absolute top-3 left-3" shape="rounded">
+            <Badge className="absolute left-3 top-3" variant="rounded">
               {badge}
             </Badge>
           )}
         </div>
+      </Link>
 
-        <div className="mt-2 flex flex-col items-start gap-x-4 gap-y-3 px-1 @xs:mt-3 @2xl:flex-row">
-          <div className="flex-1 text-sm @[16rem]:text-base">
+      <div className="mt-2 flex flex-col items-start gap-x-4 gap-y-3 px-1 @xs:mt-3 @2xl:flex-row">
+        <div className="flex-1">
+          <Link className="group text-base" href={href} tabIndex={-1}>
             <span
               className={clsx(
                 'block font-semibold',
@@ -136,7 +135,7 @@ export function ProductCard({
             {subtitle != null && subtitle !== '' && (
               <span
                 className={clsx(
-                  'block text-sm font-normal',
+                  'mb-2 block text-sm font-normal',
                   {
                     light: 'text-[var(--product-card-light-subtitle,hsl(var(--foreground)/75%))]',
                     dark: 'text-[var(--product-card-dark-subtitle,hsl(var(--background)/75%))]',
@@ -147,62 +146,43 @@ export function ProductCard({
               </span>
             )}
             {price != null && <PriceLabel colorScheme={colorScheme} price={price} />}
-          </div>
-        </div>
-        {href !== '#' && (
-          <Link
-            aria-label={title}
-            className={clsx(
-              'absolute inset-0 rounded-t-2xl rounded-b-lg focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[var(--product-card-focus,hsl(var(--primary)))] focus-visible:ring-offset-4',
-              {
-                light: 'ring-offset-[var(--product-card-light-offset,hsl(var(--background)))]',
-                dark: 'ring-offset-[var(--product-card-dark-offset,hsl(var(--foreground)))]',
-              }[colorScheme],
-            )}
-            href={href}
-            id={id}
-          >
-            <span className="sr-only">View product</span>
           </Link>
+        </div>
+
+        {showCompare && (
+          <div className="mt-0.5 shrink-0">
+            <Compare
+              colorScheme={colorScheme}
+              label={compareLabel}
+              paramName={compareParamName}
+              productId={id}
+            />
+          </div>
         )}
       </div>
-      {showCompare && (
-        <div className="mt-0.5 shrink-0">
-          <Compare
-            colorScheme={colorScheme}
-            label={compareLabel}
-            paramName={compareParamName}
-            product={{ id, title, href, image }}
-          />
-        </div>
-      )}
-    </article>
+    </div>
   );
 }
 
-export function ProductCardSkeleton({
-  className,
-  aspectRatio = '5:6',
-}: Pick<ProductCardProps, 'className' | 'aspectRatio'>) {
+export function ProductCardSkeleton({ className }: { className?: string }) {
   return (
-    <Skeleton.Root className={clsx(className)}>
-      <Skeleton.Box
-        className={clsx(
-          'rounded-[var(--product-card-border-radius,1rem)]',
-          {
-            '5:6': 'aspect-5/6',
-            '3:4': 'aspect-3/4',
-            '1:1': 'aspect-square',
-          }[aspectRatio],
-        )}
-      />
+    <div className={className}>
+      <div className="flex aspect-[5/6] flex-col gap-2 rounded-xl bg-contrast-100 @md:rounded-2xl" />
       <div className="mt-2 flex flex-col items-start gap-x-4 gap-y-3 px-1 @xs:mt-3 @2xl:flex-row">
-        <div className="w-full text-sm @[16rem]:text-base">
-          <Skeleton.Text characterCount={10} className="rounded-sm" />
-          <Skeleton.Text characterCount={8} className="rounded-sm" />
-          <Skeleton.Text characterCount={6} className="rounded-sm" />
+        <div className="flex-1">
+          <div className="flex flex-col text-base">
+            <div className="flex h-[1lh] items-center">
+              <span className="block h-[1ex] w-[10ch] rounded-sm bg-contrast-100" />
+            </div>
+            <div className="mb-2 flex h-[1lh] items-center text-sm font-normal text-contrast-400">
+              <span className="block h-[1ex] w-[8ch] rounded-sm bg-contrast-100" />
+            </div>
+            <div className="flex h-[1lh] items-center">
+              <span className="block h-[1ex] w-[5ch] rounded-sm bg-contrast-100" />
+            </div>
+          </div>
         </div>
       </div>
-    </Skeleton.Root>
+    </div>
   );
 }

@@ -1,12 +1,12 @@
-import { Group } from '@makeswift/runtime/controls';
+import { Shape } from '@makeswift/runtime/controls';
 
 import { banner } from './banner';
 import { nav } from './nav';
 
-export const header = Group({
+export const header = Shape({
   label: 'Header',
-  preferredLayout: Group.Layout.Popover,
-  props: {
+  layout: Shape.Layout.Popover,
+  type: {
     banner,
     nav,
   },

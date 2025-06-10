@@ -1,4 +1,4 @@
-import { Checkbox, Image, Link, Select, Style, TextInput } from '@makeswift/runtime/controls';
+import { Image, Link, Select, Style, TextInput } from '@makeswift/runtime/controls';
 
 import { Card, CardProps } from '@/vibes/soul/primitives/card';
 import { runtime } from '~/lib/makeswift/runtime';
@@ -54,25 +54,6 @@ runtime.registerComponent(
         ],
         defaultValue: 'light',
       }),
-      textPosition: Select({
-        label: 'Text position',
-        options: [
-          { value: 'inside', label: 'Inside' },
-          { value: 'outside', label: 'Outside' },
-        ],
-        defaultValue: 'outside',
-      }),
-      textSize: Select({
-        label: 'Text size',
-        options: [
-          { value: 'small', label: 'Small' },
-          { value: 'medium', label: 'Medium' },
-          { value: 'large', label: 'Large' },
-          { value: 'x-large', label: 'X-Large' },
-        ],
-        defaultValue: 'small',
-      }),
-      showOverlay: Checkbox({ label: 'Show overlay', defaultValue: true }),
     },
   },
 );
